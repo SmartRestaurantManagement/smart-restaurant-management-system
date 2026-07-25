@@ -545,6 +545,7 @@ export type Database = {
           party_size: number
           reserved_for: string
           restaurant_id: string
+          status: Database["public"]["Enums"]["reservation_status"]
           table_id: string | null
           updated_at: string
         }
@@ -558,6 +559,7 @@ export type Database = {
           party_size: number
           reserved_for: string
           restaurant_id: string
+          status?: Database["public"]["Enums"]["reservation_status"]
           table_id?: string | null
           updated_at?: string
         }
@@ -571,6 +573,7 @@ export type Database = {
           party_size?: number
           reserved_for?: string
           restaurant_id?: string
+          status?: Database["public"]["Enums"]["reservation_status"]
           table_id?: string | null
           updated_at?: string
         }
@@ -781,6 +784,13 @@ export type Database = {
         | "served"
         | "completed"
         | "cancelled"
+      reservation_status:
+        | "pending"
+        | "confirmed"
+        | "seated"
+        | "completed"
+        | "cancelled"
+        | "no_show"
       service_request_status:
         | "pending"
         | "in_progress"
@@ -928,6 +938,14 @@ export const Constants = {
         "served",
         "completed",
         "cancelled",
+      ],
+      reservation_status: [
+        "pending",
+        "confirmed",
+        "seated",
+        "completed",
+        "cancelled",
+        "no_show",
       ],
       service_request_status: [
         "pending",
