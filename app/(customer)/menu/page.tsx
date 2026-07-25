@@ -1,6 +1,7 @@
 import { getMenu } from '@/lib/menu/get-menu'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { AddToCartButton } from '@/components/customer/add-to-cart-button'
 
 export default async function MenuPage() {
   const categories = await getMenu()
@@ -46,6 +47,15 @@ export default async function MenuPage() {
                       </p>
                     )}
                     <p className="font-semibold">₹{item.price}</p>
+
+                    <div className="mt-3">
+                    <AddToCartButton
+                      menuItemId={item.id}
+                      name={item.name}
+                      price={item.price}
+                      disabled={isSoldOut}
+                    />
+                    </div>
                   </CardContent>
                 </Card>
               )
