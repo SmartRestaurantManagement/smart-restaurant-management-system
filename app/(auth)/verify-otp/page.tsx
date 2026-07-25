@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-export default function VerifyOtpPage() {
+function VerifyOtpForm() {
   const [otp, setOtp] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -17,20 +17,16 @@ export default function VerifyOtpPage() {
     e.preventDefault()
     setLoading(true)
     setError('')
-
     const { error } = await supabase.auth.verifyOtp({
       email,
       token: otp,
       type: 'signup',
     })
-
     setLoading(false)
-
     if (error) {
       setError(error.message)
       return
     }
-
     router.push('/menu')
   }
 
@@ -52,5 +48,13 @@ export default function VerifyOtpPage() {
         {loading ? 'Verifying...' : 'Verify'}
       </button>
     </form>
+  )
+}
+
+export default function VerifyOtpPage() {
+  return (
+    <Suspense fallback={<div className="max-w-sm mx-auto mt-20 text-center text-gray-500">Loading...</div>}>
+      <VerifyOtpForm />
+    </Suspense>
   )
 }
