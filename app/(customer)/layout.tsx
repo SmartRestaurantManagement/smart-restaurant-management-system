@@ -1,5 +1,5 @@
 import { CartProvider } from '@/lib/cart/cart-context'
-import { CartIndicator } from '@/components/customer/cart-indicator'
+import { CustomerHeader } from '@/components/customer/customer-header'
 
 export default function CustomerLayout({
   children,
@@ -8,11 +8,10 @@ export default function CustomerLayout({
 }) {
   return (
     <CartProvider>
-      <header className="border-b px-4 py-3 flex justify-between items-center">
-        <span className="font-semibold">Kaizen</span>
-        <CartIndicator />
-      </header>
-      {children}
+      <div className="min-h-screen bg-neutral-50/40">
+        <CustomerHeader />
+        {children}
+      </div>
     </CartProvider>
   )
 }

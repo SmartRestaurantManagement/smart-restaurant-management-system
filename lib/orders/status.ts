@@ -57,5 +57,22 @@ export async function advanceOrderStatus(
     throw new Error(`Failed to advance order status: ${error.message}`);
   }
 
+  // Insert status history row
+  try {
+    const { error: historyError } = await (supabase as any)
+      .from("order_status_history")
+      .insert({
+        restaurant_id: data.restaurant_id,
+        order_id: orderId,
+        status: nextStatus,
+      });
+
+    if (historyError) {
+      console.warn("Failed to write to order_status_history:", historyError.message);
+    }
+  } catch (err) {
+    console.warn("Error inserting order status history:", err);
+  }
+
   return data;
 }

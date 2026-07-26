@@ -1,68 +1,38 @@
 import { getMenu } from '@/lib/menu/get-menu'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { AddToCartButton } from '@/components/customer/add-to-cart-button'
+import { ClientMenu } from '@/components/customer/client-menu'
+
+export const dynamic = 'force-dynamic'
 
 export default async function MenuPage() {
   const categories = await getMenu()
 
   if (categories.length === 0) {
     return (
-      <div className="p-8 text-center text-muted-foreground">
-        No menu items available right now. Please check back shortly.
+      <div className="p-12 text-center text-muted-foreground bg-white border border-dashed border-neutral-200 max-w-lg mx-auto rounded-3xl mt-12 space-y-2">
+        <h3 className="font-bold text-neutral-800 text-lg">Menu empty or loading</h3>
+        <p className="text-sm">No menu items available right now. Please trigger a Database Reset on the staff dashboard or check back shortly.</p>
       </div>
     )
   }
 
   return (
-    <main className="max-w-5xl mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Our Menu</h1>
+    <div className="bg-neutral-50/20 min-h-screen">
+      {/* Hero section */}
+      <div className="bg-gradient-to-br from-neutral-900 via-neutral-800 to-amber-950 text-white py-12 px-4 shadow-sm">
+        <div className="max-w-5xl mx-auto space-y-2">
+          <span className="text-amber-500 font-bold text-xs uppercase tracking-widest">
+            Welcome to Kaizen Dine-In
+          </span>
+          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">
+            Delicious food, calibrated live.
+          </h1>
+          <p className="text-sm md:text-base text-neutral-300 max-w-xl font-normal">
+            Browse our menu, see live portion availability, and order with customizations sent directly to our kitchen.
+          </p>
+        </div>
+      </div>
 
-      {categories.map((category) => (
-        <section key={category.id} className="mb-10">
-          <h2 className="text-xl font-semibold mb-4">{category.name}</h2>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {category.menu_items.map((item) => {
-              const isSoldOut =
-                item.is_available === false ||
-                (item.remaining_stock !== null && item.remaining_stock <= 0)
-
-              return (
-                <Card key={item.id} className={isSoldOut ? 'opacity-60' : ''}>
-                  <CardHeader className="flex flex-row items-start justify-between">
-                    <CardTitle className="text-base">{item.name}</CardTitle>
-                    {isSoldOut ? (
-                      <Badge variant="destructive">Sold Out</Badge>
-                    ) : item.remaining_stock !== null ? (
-                      <Badge variant="secondary">
-                        Only {item.remaining_stock} left
-                      </Badge>
-                    ) : null}
-                  </CardHeader>
-                  <CardContent>
-                    {item.description && (
-                      <p className="text-sm text-muted-foreground mb-2">
-                        {item.description}
-                      </p>
-                    )}
-                    <p className="font-semibold">₹{item.price}</p>
-
-                    <div className="mt-3">
-                    <AddToCartButton
-                      menuItemId={item.id}
-                      name={item.name}
-                      price={item.price}
-                      disabled={isSoldOut}
-                    />
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
-        </section>
-      ))}
-    </main>
+      <ClientMenu initialCategories={categories} />
+    </div>
   )
 }
