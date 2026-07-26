@@ -275,7 +275,7 @@ export default function CartPage() {
                     : "bg-white text-neutral-700 border-neutral-200 hover:bg-neutral-50"
                 }`}
               >
-                {isSelected ? <Check className="h-3 w.5" /> : <div className="h-3 w-3 border border-neutral-300 rounded-sm" />}
+                {isSelected ? <Check className="h-3 w-5" /> : <div className="h-3 w-3 border border-neutral-300 rounded-sm" />}
                 <span>{allergen} Allergy</span>
               </button>
             )

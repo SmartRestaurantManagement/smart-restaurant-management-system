@@ -93,6 +93,7 @@
 }
 
 @theme inline {
+  --text-xxs: 0.625rem;
   --font-heading: var(--font-sans);
   --font-sans: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);

@@ -31,7 +31,7 @@ export async function calculateEstimatedWaitTime(
     // We look for 'preparing' and 'ready' timestamps for the same orders in the last 24 hours
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     
-    const { data: historyData, error: historyError } = await (supabase as any)
+    const { data: historyData, error: historyError } = await supabase
       .from("order_status_history")
       .select("order_id, status, created_at")
       .eq("restaurant_id", restaurantId)

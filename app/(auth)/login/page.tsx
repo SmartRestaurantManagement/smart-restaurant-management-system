@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { getAuthErrorMessage } from '@/lib/auth/get-auth-error-message'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -23,19 +24,12 @@ export default function LoginPage() {
     setLoading(false)
 
     if (error) {
-      setError(error.message)
+      setError(getAuthErrorMessage(error))
       return
     }
 
     router.push('/menu')
     router.refresh()
-  }
-
-  const handleGoogleLogin = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
-    })
   }
 
   return (
@@ -61,9 +55,6 @@ export default function LoginPage() {
         {error && <p className="text-red-500 text-sm">{error}</p>}
         <button disabled={loading} className="w-full bg-black text-white rounded px-3 py-2 font-semibold">
           {loading ? 'Logging in...' : 'Log in'}
-        </button>
-        <button type="button" onClick={handleGoogleLogin} className="w-full border rounded px-3 py-2 font-medium">
-          Continue with Google
         </button>
       </form>
       <p className="text-sm text-neutral-500 text-center">

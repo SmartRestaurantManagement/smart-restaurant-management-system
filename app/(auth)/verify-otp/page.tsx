@@ -3,6 +3,7 @@
 import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { getAuthErrorMessage } from '@/lib/auth/get-auth-error-message'
 
 function VerifyOtpForm() {
   const [otp, setOtp] = useState('')
@@ -24,7 +25,7 @@ function VerifyOtpForm() {
     })
     setLoading(false)
     if (error) {
-      setError(error.message)
+      setError(getAuthErrorMessage(error))
       return
     }
     router.push('/menu')
