@@ -48,6 +48,8 @@ export async function POST(request: NextRequest) {
       temp_max_c?: number;
     };
 
+    console.log(`[API AI Insights] Request received. Forecasts count: ${forecasts?.length}, weather: ${weather_condition}, temp: ${temp_max_c}`);
+
     if (!forecasts || !weather_condition || temp_max_c === undefined) {
       return NextResponse.json(
         { error: "forecasts, weather_condition, and temp_max_c are required" },
@@ -56,13 +58,15 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      const insights = await generateAnalyticsInsights(
+      const result = await generateAnalyticsInsights(
         forecasts,
         weather_condition,
         temp_max_c
       );
-      return NextResponse.json({ insights });
+      console.log(`[API AI Insights] Successfully generated insights using provider: ${result.provider}`);
+      return NextResponse.json({ insights: result.insights, provider: result.provider });
     } catch (e) {
+      console.error("[API AI Insights] Error generating insights:", e);
       return NextResponse.json(
         { error: e instanceof Error ? e.message : "Analytics insights generation failed" },
         { status: 500 }
