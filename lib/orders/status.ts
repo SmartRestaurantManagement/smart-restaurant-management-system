@@ -25,15 +25,9 @@ export function getNextOrderStatus(current: OrderStatus): OrderStatus | null {
 
 /**
  * Advances an order to its next status. This is the single place order
- * status changes - the wait-time engine (Day 2) will read from whatever
- * per-status timestamp record this function produces, so all transitions
- * must go through here rather than ad-hoc .update() calls elsewhere.
- *
- * NOT YET WIRED: supabase/migrations has no per-status timestamp record
- * (no order_status_history table yet - team is adding one). Once it
- * exists, insert the history row here, right after the status update,
- * inside the same function - this stays the one place a transition is
- * recorded, nothing else needs to change.
+ * status changes - the wait-time engine reads from the order_status_history
+ * row this function writes, so all transitions must go through here rather
+ * than ad-hoc .update() calls elsewhere.
  */
 export async function advanceOrderStatus(
   supabase: SupabaseClient<Database>,
@@ -59,7 +53,7 @@ export async function advanceOrderStatus(
 
   // Insert status history row
   try {
-    const { error: historyError } = await (supabase as any)
+    const { error: historyError } = await supabase
       .from("order_status_history")
       .insert({
         restaurant_id: data.restaurant_id,

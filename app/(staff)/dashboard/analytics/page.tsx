@@ -334,7 +334,7 @@ export default function AnalyticsDashboardPage() {
     
     try {
       const tomorrowEndOfDay = new Date()
-      tomorrowEndOfDay.setDate(tomorrowEndOfDay.setDate() + 1)
+      tomorrowEndOfDay.setDate(tomorrowEndOfDay.getDate() + 1)
       tomorrowEndOfDay.setHours(23, 59, 59, 999)
 
       if (!currentActive) {

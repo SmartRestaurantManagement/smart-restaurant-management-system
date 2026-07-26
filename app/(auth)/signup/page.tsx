@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { getAuthErrorMessage } from '@/lib/auth/get-auth-error-message'
 
 export default function SignupPage() {
   const [email, setEmail] = useState('')
@@ -23,7 +24,7 @@ export default function SignupPage() {
     setLoading(false)
 
     if (error) {
-      setError(error.message)
+      setError(getAuthErrorMessage(error))
       return
     }
 
