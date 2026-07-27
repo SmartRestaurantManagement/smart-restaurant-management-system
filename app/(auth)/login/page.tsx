@@ -19,16 +19,51 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    let loginEmail = email.trim()
+    let loginPassword = password
 
-    setLoading(false)
+    const expectedAdminUser = process.env.NEXT_PUBLIC_DASHBOARD_ADMIN_USER || 'admin'
+    const expectedAdminPass = process.env.NEXT_PUBLIC_DASHBOARD_ADMIN_PASS || 'admin123'
+    const expectedStaffUser = process.env.NEXT_PUBLIC_DASHBOARD_STAFF_USER || 'staff'
+    const expectedStaffPass = process.env.NEXT_PUBLIC_DASHBOARD_STAFF_PASS || 'staff123'
+
+    if (loginEmail === expectedAdminUser && loginPassword === expectedAdminPass) {
+      loginEmail = 'ananya.rao@kaizen.demo'
+      loginPassword = 'KaizenDemo123!'
+    } else if (loginEmail === expectedStaffUser && loginPassword === expectedStaffPass) {
+      loginEmail = 'vikram.singh@kaizen.demo'
+      loginPassword = 'KaizenDemo123!'
+    }
+
+    const { data, error } = await supabase.auth.signInWithPassword({ 
+      email: loginEmail, 
+      password: loginPassword 
+    })
 
     if (error) {
+      setLoading(false)
       setError(getAuthErrorMessage(error))
       return
     }
 
-    router.push('/menu')
+    if (data.user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', data.user.id)
+        .maybeSingle()
+
+      setLoading(false)
+
+      if (profile && (profile.role === 'staff' || profile.role === 'admin')) {
+        router.push('/dashboard/orders')
+      } else {
+        router.push('/menu')
+      }
+    } else {
+      setLoading(false)
+      router.push('/menu')
+    }
     router.refresh()
   }
 
@@ -37,8 +72,8 @@ export default function LoginPage() {
       <form onSubmit={handleLogin} className="space-y-4">
         <h1 className="text-2xl font-bold">Log in</h1>
         <input
-          type="email"
-          placeholder="Email"
+          type="text"
+          placeholder="Email or Username"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required

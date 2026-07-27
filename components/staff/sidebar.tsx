@@ -49,29 +49,6 @@ export function StaffSidebar() {
     loadUserAndProfile();
   }, [supabase]);
 
-  const handleDemoSwitchRole = async () => {
-    if (!user || !profile) return;
-    setSwitchingRole(true);
-
-    try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ role: "customer" })
-        .eq("id", user.id);
-
-      if (error) throw error;
-
-      router.push("/menu");
-      router.refresh();
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "An error occurred";
-      console.error("Failed to switch demo role:", e);
-      alert(`Role switch error: ${msg}`);
-    } finally {
-      setSwitchingRole(false);
-    }
-  };
-
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push("/menu");
@@ -136,17 +113,6 @@ export function StaffSidebar() {
             <ShoppingBag className="h-3.5 w-3.5 text-neutral-500" />
             <span>Customer Menu</span>
           </Link>
-
-          {profile && (
-            <button
-              onClick={handleDemoSwitchRole}
-              disabled={switchingRole}
-              className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50/50 hover:bg-amber-50 px-3 py-2 text-xxs font-extrabold text-amber-800 transition-colors cursor-pointer shadow-xxs disabled:opacity-50"
-            >
-              <ArrowLeftRight className="h-3.5 w-3.5 text-amber-600" />
-              <span>{switchingRole ? "Switching..." : "Demo: Become Customer"}</span>
-            </button>
-          )}
 
           <button
             onClick={handleLogout}
