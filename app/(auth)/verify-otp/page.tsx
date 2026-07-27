@@ -58,6 +58,7 @@ function VerifyOtpForm() {
           />
           {error && <p className="text-sm text-red-500">{error}</p>}
           <Button
+            type="submit"
             disabled={loading}
             className="w-full rounded-xl bg-terracotta py-5 text-sm font-bold text-terracotta-foreground hover:bg-terracotta/90"
           >

@@ -24,6 +24,16 @@ export async function middleware(request: NextRequest) {
   // both depend on anonymous visitors actually being able to reach it.
   const isBrowsablePath = pathname.startsWith('/menu')
 
+  // Neither rule below ever reads `user` for these two path types (rule 1 is
+  // bypassed for both, rule 2 only applies to isPublicPath/"/"), so skip the
+  // Supabase auth round-trip entirely instead of paying for it and throwing
+  // the result away. /dashboard also does its own auth check in
+  // app/(staff)/dashboard/layout.tsx right after this, so skipping here
+  // halves the auth latency for every dashboard navigation.
+  if (isPinGatedPath || isBrowsablePath) {
+    return NextResponse.next({ request })
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   })
