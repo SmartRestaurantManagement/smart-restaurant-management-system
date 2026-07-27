@@ -28,7 +28,7 @@ export function AddToCartButton({ menuItemId, name, price, disabled }: Props) {
   if (!user) {
     return (
       <Button size="sm" disabled className="opacity-60 cursor-not-allowed">
-        Login to Order
+        Sign Up to Order
       </Button>
     )
   }
@@ -38,6 +38,7 @@ export function AddToCartButton({ menuItemId, name, price, disabled }: Props) {
       size="sm"
       disabled={disabled}
       onClick={() => addItem({ menuItemId, name, price })}
+      className="bg-terracotta text-terracotta-foreground hover:bg-terracotta/90"
     >
       {disabled ? 'Unavailable' : 'Add to Cart'}
     </Button>

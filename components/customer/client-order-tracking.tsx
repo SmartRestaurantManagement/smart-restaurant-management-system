@@ -279,7 +279,7 @@ export function ClientOrderTracking({
             <Button
               onClick={() => router.push(`/group/${sessionId}`)}
               disabled={currentStepIndex < 3} // split bill enabled once order is ready, served, or completed
-              className="flex-1 bg-neutral-900 text-white font-bold rounded-xl py-5"
+              className="flex-1 bg-terracotta text-terracotta-foreground hover:bg-terracotta/90 font-bold rounded-xl py-5"
             >
               <Receipt className="mr-2 h-4 w-4" />
               Split Bill

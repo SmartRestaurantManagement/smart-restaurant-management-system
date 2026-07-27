@@ -158,7 +158,7 @@ export function CustomerHeader() {
           {/* Cart Trigger */}
           <Link 
             href="/cart"
-            className="relative flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/95 transition-all shadow-sm rounded-full px-4 py-2 text-sm font-medium"
+            className="relative flex items-center gap-2 bg-terracotta text-terracotta-foreground hover:bg-terracotta/90 transition-all shadow-sm rounded-full px-4 py-2 text-sm font-medium"
           >
             <ShoppingBag className="h-4 w-4" />
             <span>Cart</span>
@@ -216,7 +216,7 @@ export function CustomerHeader() {
               </Link>
               <Link
                 href="/signup"
-                className="text-xs font-bold text-neutral-600 hover:text-neutral-900 bg-neutral-100 hover:bg-neutral-200 px-3.5 py-2 rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
+                className="text-xs font-bold text-terracotta hover:text-terracotta-foreground bg-terracotta/10 hover:bg-terracotta px-3.5 py-2 rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
               >
                 <User className="h-3.5 w-3.5" />
                 <span>Sign Up</span>

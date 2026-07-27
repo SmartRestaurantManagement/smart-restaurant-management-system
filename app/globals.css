@@ -134,9 +134,26 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  --color-terracotta: var(--terracotta);
+  --color-terracotta-foreground: var(--terracotta-foreground);
+  --color-moss: var(--moss);
+  --color-moss-foreground: var(--moss-foreground);
+  --color-charcoal: var(--charcoal);
+  --color-charcoal-foreground: var(--charcoal-foreground);
 }
 
 :root {
+  /* Warm brand accents: terracotta (primary warmth), moss (deep green
+     accent), charcoal (near-black warm neutral) - paired with Tailwind's
+     stock amber-* scale, already used throughout the customer UI. */
+  --terracotta: oklch(0.58 0.14 40);
+  --terracotta-foreground: oklch(0.98 0.01 60);
+  --moss: oklch(0.34 0.045 145);
+  --moss-foreground: oklch(0.96 0.02 120);
+  --charcoal: oklch(0.19 0.012 40);
+  --charcoal-foreground: oklch(0.96 0.01 60);
+
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
