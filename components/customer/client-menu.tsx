@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { MenuItemPairing } from '@/components/customer/menu-item-pairing'
 import { useCart } from '@/lib/cart/cart-context'
 import { useTableSession } from '@/lib/cart/table-session'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -306,6 +307,7 @@ export function ClientMenu({ initialCategories }: Props) {
                           disabled={isSoldOut}
                         />
                       </div>
+                      <MenuItemPairing menuItemId={item.id} />
                     </CardContent>
                   </Card>
                 )

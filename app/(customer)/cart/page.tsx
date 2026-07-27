@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { useRouter } from 'next/navigation'
+import { getTopPairing } from '@/lib/pairing/get-pairing'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useTableSession } from '@/lib/cart/table-session'
@@ -20,6 +21,22 @@ const ALLERGEN_RULES: Record<string, string[]> = {
   Peanuts: ["peanut", "groundnut", "peanut butter"],
   Soy: ["soy", "tofu", "soya"],
 };
+
+function PairingSuggestion({ menuItemId }: { menuItemId: string }) {
+  const [pairing, setPairing] = useState<{ paired_name: string } | null>(null)
+
+  useEffect(() => {
+    getTopPairing(menuItemId).then(setPairing)
+  }, [menuItemId])
+
+  if (!pairing) return null
+
+  return (
+    <p className="text-xxs text-neutral-400 mt-1.5">
+      Goes well with: <span className="font-medium text-neutral-500">{pairing.paired_name}</span>
+    </p>
+  )
+}
 
 export default function CartPage() {
   const { items, updateQty, updateNotes, removeItem, total, clearCart } = useCart()
@@ -349,6 +366,7 @@ export default function CartPage() {
                   onChange={(e) => updateNotes(item.menuItemId, e.target.value)}
                   className="w-full bg-neutral-50/50 border border-neutral-200/60 rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-amber-500 text-neutral-700 mt-2 block"
                 />
+                <PairingSuggestion menuItemId={item.menuItemId} />
               </div>
 
               <div className="text-right shrink-0">
