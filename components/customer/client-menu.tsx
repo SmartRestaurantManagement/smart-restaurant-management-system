@@ -25,7 +25,7 @@ type Props = {
 
 export function ClientMenu({ initialCategories }: Props) {
   const { tableNumber, tableId, sessionId, startSession, endSession } = useTableSession()
-  const { addItem } = useCart()
+  const { addItem, items } = useCart()
   const [categories, setCategories] = useState(initialCategories)
   const [tables, setTables] = useState<TableRow[]>([])
   const [activeOffers, setActiveOffers] = useState<OfferRow[]>([])
@@ -400,7 +400,9 @@ export function ClientMenu({ initialCategories }: Props) {
                           disabled={isSoldOut}
                         />
                       </div>
-                      <MenuItemPairing menuItemId={item.id} />
+                      {items.some(i => i.menuItemId === item.id) && (
+                        <MenuItemPairing menuItemId={item.id} />
+                      )}
                     </CardContent>
                   </Card>
                 )

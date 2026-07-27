@@ -22,9 +22,9 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex flex-col md:flex-row min-h-screen bg-neutral-50/30">
       <StaffSidebar />
-      <main className="flex-1 p-6">{children}</main>
+      <main className="flex-1 p-3 sm:p-6 overflow-x-hidden">{children}</main>
     </div>
   );
 }

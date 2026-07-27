@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { 
-  BarChart, TrendingUp, Sparkles, AlertTriangle, CloudSun, Leaf, RefreshCw, Layers, Info
+  BarChart, TrendingUp, Sparkles, AlertTriangle, CloudSun, Leaf, RefreshCw, Layers, Info, ShieldAlert, Lock
 } from 'lucide-react'
 
 interface MenuItemCost {
@@ -41,6 +41,7 @@ interface SystemStatus {
 export default function AnalyticsDashboardPage() {
   const supabase = createClient()
   const [restaurantId, setRestaurantId] = useState<string | null>(null)
+  const [userRole, setUserRole] = useState<'admin' | 'staff' | 'customer' | null>(null)
   
   // Data state
   const [menuCosts, setMenuCosts] = useState<MenuItemCost[]>([])
@@ -151,7 +152,7 @@ export default function AnalyticsDashboardPage() {
         .eq('restaurant_id', rid)
 
       if (costError) {
-        throw new Error(`Failed to load menu costs: ${costError.message}`)
+        console.warn(`Could not load menu costs (RLS or missing view): ${costError.message}`)
       }
       const costs = (costData as unknown as MenuItemCost[]) || []
       setMenuCosts(costs)
@@ -307,7 +308,10 @@ export default function AnalyticsDashboardPage() {
           const now = Date.now()
           setInsightsTimestamp(now)
           
-          // Cache in local storage
+          if (data.error) {
+            setAiError(data.error)
+          }
+          
           localStorage.setItem('kaizen_ai_insights', JSON.stringify(lines))
           localStorage.setItem('kaizen_ai_insights_provider', data.provider || 'gemini')
           localStorage.setItem('kaizen_ai_insights_timestamp', now.toString())
@@ -329,7 +333,6 @@ export default function AnalyticsDashboardPage() {
   const handleToggleOffer = async (item: ForecastItem, currentActive: boolean) => {
     if (!restaurantId) return
     
-    // Set loading for this specific toggle
     setTogglingOffers(prev => ({ ...prev, [item.menuItemId]: true }))
     
     try {
@@ -337,49 +340,66 @@ export default function AnalyticsDashboardPage() {
       tomorrowEndOfDay.setDate(tomorrowEndOfDay.getDate() + 1)
       tomorrowEndOfDay.setHours(23, 59, 59, 999)
 
-      if (!currentActive) {
-        // Toggle ON: insert or update as active: true
-        const { error: upsertError } = await supabase
+      // First check if an offer row already exists for this dish
+      const { data: existingOffer } = await supabase
+        .from('offers')
+        .select('id')
+        .eq('restaurant_id', restaurantId)
+        .eq('menu_item_id', item.menuItemId)
+        .maybeSingle()
+
+      if (existingOffer) {
+        // Update existing offer row
+        const { error: updateError } = await supabase
           .from('offers')
-          .upsert({
+          .update({
+            active: !currentActive,
+            discount_pct: item.suggestedDiscountPct || 15,
+            floor_price: item.floorPrice || item.price * 0.85,
+            expires_at: tomorrowEndOfDay.toISOString()
+          })
+          .eq('id', existingOffer.id)
+
+        if (updateError) throw updateError
+      } else {
+        // Insert new offer row
+        const { error: insertError } = await supabase
+          .from('offers')
+          .insert({
             restaurant_id: restaurantId,
             menu_item_id: item.menuItemId,
             discount_pct: item.suggestedDiscountPct || 15,
             floor_price: item.floorPrice || item.price * 0.85,
-            active: true,
+            active: !currentActive,
             expires_at: tomorrowEndOfDay.toISOString()
-          }, { onConflict: 'restaurant_id,menu_item_id' })
+          })
 
-        if (upsertError) throw upsertError
-        setActiveOffersMap(prev => ({ ...prev, [item.menuItemId]: true }))
-      } else {
-        // Toggle OFF: set active: false
-        const { error: updateError } = await supabase
-          .from('offers')
-          .update({ active: false })
-          .eq('restaurant_id', restaurantId)
-          .eq('menu_item_id', item.menuItemId)
-
-        if (updateError) throw updateError
-        setActiveOffersMap(prev => ({ ...prev, [item.menuItemId]: false }))
+        if (insertError) throw insertError
       }
+
+      setActiveOffersMap(prev => ({ ...prev, [item.menuItemId]: !currentActive }))
+      await loadWasteAvoided(restaurantId, menuCosts)
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to update offer"
       console.error("Failed to update offer status:", err)
       alert(`Failed to update offer: ${msg}`)
     } finally {
       setTogglingOffers(prev => ({ ...prev, [item.menuItemId]: false }))
-      // Update running waste-avoided count
-      await loadWasteAvoided(restaurantId, menuCosts)
     }
   }
 
-  // Initial mount: load restaurant ID and query status
+  // Initial mount: load user role, restaurant ID and query status
   useEffect(() => {
     (async () => {
       setLoading(true)
       checkSystemStatus()
       
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: prof } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
+        if (prof) setUserRole(prof.role as any)
+      }
+
       let rid = await getCallerRestaurantId(supabase)
       if (!rid) {
         const { data } = await supabase.from('restaurants').select('id').limit(1).single()
@@ -447,11 +467,11 @@ export default function AnalyticsDashboardPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 max-w-5xl mx-auto pb-12">
+    <div className="flex flex-col gap-6 max-w-5xl mx-auto pb-12 px-2 sm:px-4">
       {/* Title Header */}
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-neutral-900">Kaizen Business Intelligence</h1>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900">Kaizen Business Intelligence</h1>
           <p className="text-xs text-neutral-500 mt-1">
             Real-time demand forecasting, recipe-aware stock risk analysis, menu engineering matrix, and automated smart offers.
           </p>
@@ -463,7 +483,7 @@ export default function AnalyticsDashboardPage() {
           className="bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold px-4 py-2 rounded-xl flex items-center gap-1.5 shrink-0 self-start sm:self-auto shadow-sm transition-all duration-200"
         >
           <Sparkles className="h-4 w-4 text-amber-400 animate-pulse" />
-          {fetchingInsights ? 'Crunching Insights...' : 'Re-run AI Analysis'}
+          {fetchingInsights ? 'Crunching Insights...' : 'Generate Insights Now'}
         </Button>
       </div>
 
@@ -475,12 +495,12 @@ export default function AnalyticsDashboardPage() {
             <span>Checking cloud connections...</span>
           </div>
         ) : systemStatus ? (
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-2.5 shadow-sm text-neutral-200">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-2.5 shadow-sm text-neutral-200">
             <span className="text-xxs font-extrabold text-neutral-400 uppercase tracking-wider">Infrastructure Status:</span>
             
             {/* Supabase */}
             <div className="flex items-center gap-1.5 text-xxs font-bold">
-              <span className={`h-2 w-2 rounded-full ${systemStatus.supabase.healthy ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+              <span className={`h-2.5 w-2.5 rounded-full ${systemStatus.supabase.healthy ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
               <span>Supabase DB</span>
               <span className="text-neutral-500 font-normal">({systemStatus.supabase.message})</span>
             </div>
@@ -532,7 +552,7 @@ export default function AnalyticsDashboardPage() {
         <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
           <RefreshCw className="h-8 w-8 animate-spin text-amber-600" />
           <p className="text-sm font-bold text-neutral-700">Crunching order metrics & compiling forecast cache...</p>
-          <p className="text-xxs text-neutral-400">Evaluating 7-week moving average & checking live ingredient stocks.</p>
+          <p className="text-xxs text-neutral-400">Evaluating moving average & checking live ingredient stocks.</p>
         </div>
       )}
 
@@ -540,7 +560,7 @@ export default function AnalyticsDashboardPage() {
       {!loading && !error && (
         <div className="space-y-6">
           {/* KPI Dashboard Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {/* Food Waste Avoided Counter */}
             <Card className="border border-neutral-200 bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300">
               <CardContent className="p-4 flex items-center gap-3">
@@ -555,9 +575,8 @@ export default function AnalyticsDashboardPage() {
                   <div className="flex items-center gap-0.5 mt-0.5 group cursor-help text-xxs text-neutral-400">
                     <span>Active formula estimate</span>
                     <Info className="h-3 w-3 text-neutral-400 group-hover:text-neutral-500" />
-                    {/* Tooltip description */}
                     <div className="absolute hidden group-hover:block bg-neutral-950 text-white rounded-lg p-2 text-xxxs max-w-xs z-50 shadow-lg border border-neutral-800 mt-14 leading-normal">
-                      <strong>Methodology:</strong> Sum of <code className="text-emerald-400">Portions Sold × Ingredient Cost</code> for all items purchased with a Smart Offer. Represents direct food cost recovered from items flagged at risk of spoiling.
+                      <strong>Methodology:</strong> Sum of <code className="text-emerald-400">Portions Sold × Ingredient Cost</code> for all items purchased with an approved Smart Offer.
                     </div>
                   </div>
                 </div>
@@ -579,7 +598,7 @@ export default function AnalyticsDashboardPage() {
             </Card>
 
             {/* Dine-In Seat Duration */}
-            <Card className="border border-neutral-200 bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300">
+            <Card className="border border-neutral-200 bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300 col-span-1 sm:col-span-2 md:col-span-1">
               <CardContent className="p-4 flex items-center gap-3">
                 <div className="bg-indigo-50 text-indigo-700 p-3 rounded-xl border border-indigo-100 shadow-inner">
                   <TrendingUp className="h-5 w-5" />
@@ -595,14 +614,14 @@ export default function AnalyticsDashboardPage() {
 
           {/* AI Operational Recommendations */}
           <Card className="border border-amber-200 bg-amber-50/15 rounded-2xl shadow-sm overflow-hidden">
-            <CardHeader className="bg-amber-50/50 border-b border-amber-100 p-4 flex flex-row items-center justify-between gap-2">
+            <CardHeader className="bg-amber-50/50 border-b border-amber-100 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-amber-600 animate-pulse" />
                 <CardTitle className="text-xs font-extrabold text-amber-950 uppercase tracking-wider">
                   Kaizen AI Consultant Insights
                 </CardTitle>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 self-start sm:self-auto">
                 {aiProvider && (
                   <Badge variant="outline" className="text-xxs bg-white text-amber-800 border-amber-200 font-extrabold scale-90 px-2 py-0">
                     Source: {aiProvider.toUpperCase()}
@@ -615,10 +634,10 @@ export default function AnalyticsDashboardPage() {
             </CardHeader>
             <CardContent className="p-4 py-5">
               {aiError && (
-                <div className="flex items-start gap-2 bg-red-50 border border-red-150 rounded-xl p-3 mb-3 text-xxs font-semibold text-red-900">
+                <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-3 mb-3 text-xs font-semibold text-red-900">
                   <AlertTriangle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
                   <div>
-                    <strong>AI Recommendation Call Failed:</strong> {aiError}. Check API Keys and connection. (Displaying cached or offline rules below)
+                    <strong>LLM Call Issue:</strong> {aiError}. Displaying rule-based consultant guidelines below.
                   </div>
                 </div>
               )}
@@ -672,7 +691,7 @@ export default function AnalyticsDashboardPage() {
                 <div className="absolute right-0 hidden group-hover:block bg-neutral-950 text-white rounded-xl p-4 text-xxs max-w-md z-50 shadow-2xl border border-neutral-800 mt-1 leading-relaxed">
                   <h4 className="font-bold text-xxs text-amber-400 uppercase tracking-wide border-b border-neutral-800 pb-1 mb-2">Demand Forecasting Rules</h4>
                   <ul className="space-y-1.5 font-medium list-disc list-inside">
-                    <li><strong>Baseline:</strong> Recency-weighted 7-day moving average on same day-of-week (Week 1 = 30%, Week 2 = 20%... Week 7 = 5%).</li>
+                    <li><strong>Baseline:</strong> Day-of-week moving average on matching calendar day.</li>
                     <li><strong>Rain/Drizzle Adjustment:</strong>
                       <ul className="pl-4 list-circle">
                         <li>Hot Comfort categories (Soups, Curries, Naan): <span className="text-emerald-400">+20%</span></li>
@@ -681,13 +700,7 @@ export default function AnalyticsDashboardPage() {
                       </ul>
                     </li>
                     <li><strong>High Temp ({'>'}30°C) Adjustment:</strong> Cold categories <span className="text-emerald-400">+25%</span>, Hot Comfort <span className="text-red-400">-15%</span>.</li>
-                    <li><strong>Low Temp ({'<'}20°C) Adjustment:</strong> Hot Comfort <span className="text-emerald-400">+20%</span>, Cold categories <span className="text-red-400">-20%</span>.</li>
-                    <li><strong>Risk Assessment:</strong>
-                      <ul className="pl-4 list-circle">
-                        <li><span className="text-amber-400 font-bold">Overstock Risk:</span> Ingredient portions available &gt; Forecasted demand.</li>
-                        <li><span className="text-red-400 font-bold">Understock Risk:</span> Ingredient portions available &lt; Forecasted demand (triggers Auto-86).</li>
-                      </ul>
-                    </li>
+                    <li><strong>Margin Floor Floor Constraint:</strong> Discounts enforced to preserve minimum 1.15× ingredient cost floor.</li>
                   </ul>
                 </div>
               </div>
@@ -729,7 +742,7 @@ export default function AnalyticsDashboardPage() {
                             {f.understockRisk && (
                               <Badge variant="destructive" className="bg-red-100 hover:bg-red-100 text-red-800 font-extrabold border-red-200 text-xxxs px-2 py-0.5 rounded flex items-center gap-0.5">
                                 <AlertTriangle className="h-2.5 w-2.5" />
-                                Understock Risk (Auto-86 Trigger)
+                                Understock Risk
                               </Badge>
                             )}
 
@@ -766,7 +779,7 @@ export default function AnalyticsDashboardPage() {
                             <div className="flex justify-between text-xxs font-semibold text-neutral-500">
                               <span>Recipe Ingredient Stock</span>
                               <span className="font-extrabold text-neutral-800">
-                                {stock !== null ? `${stock} portions` : 'Uncapped (Not Tracked)'}
+                                {stock !== null ? `${stock} portions` : 'Uncapped'}
                               </span>
                             </div>
                             <div className="w-full bg-neutral-100 rounded-full h-2 overflow-hidden">
@@ -786,15 +799,20 @@ export default function AnalyticsDashboardPage() {
 
                         {/* Interactive Suggestion Actions */}
                         {f.overstockRisk && f.suggestedDiscountPct > 0 && (
-                          <div className="flex items-center gap-3 bg-orange-50 border border-orange-100 rounded-xl px-3.5 py-2.5 text-xxs font-semibold">
-                            <Sparkles className="h-4 w-4 text-orange-600 shrink-0" />
-                            <div className="flex-1">
-                              <span className="text-orange-950 font-bold block">Suggested Smart Offer Discount: {f.suggestedDiscountPct}% Off</span>
-                              <span className="text-neutral-500 text-xxxs font-medium block mt-0.5">Suggested Selling Price: ₹{f.floorPrice} (Original cost: ₹{f.costPerPortion.toFixed(2)})</span>
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-orange-50 border border-orange-100 rounded-xl px-3.5 py-2.5 text-xxs font-semibold">
+                            <div className="flex items-center gap-2">
+                              <Sparkles className="h-4 w-4 text-orange-600 shrink-0" />
+                              <div>
+                                <span className="text-orange-950 font-bold block">Suggested Smart Offer: {f.suggestedDiscountPct}% Off</span>
+                                <span className="text-neutral-500 text-xxxs font-medium block mt-0.5">
+                                  Suggested Price: ₹{f.floorPrice}
+                                  {userRole === 'admin' && ` (Ingredient cost: ₹${f.costPerPortion.toFixed(2)})`}
+                                </span>
+                              </div>
                             </div>
                             
                             {/* Toggle Switch */}
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 self-end sm:self-auto">
                               <button 
                                 onClick={() => handleToggleOffer(f, isOfferActive)}
                                 disabled={isToggling}
@@ -802,7 +820,7 @@ export default function AnalyticsDashboardPage() {
                               >
                                 <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isOfferActive ? 'translate-x-4' : 'translate-x-0'}`} />
                               </button>
-                              <span className={`text-xxxs font-extrabold ${isOfferActive ? 'text-orange-700' : 'text-neutral-500'} uppercase tracking-wide w-16 text-right`}>
+                              <span className={`text-xxxs font-extrabold ${isOfferActive ? 'text-orange-700' : 'text-neutral-500'} uppercase tracking-wide w-20 text-right`}>
                                 {isToggling ? 'Syncing...' : isOfferActive ? 'Live on Menu' : 'Approve Draft'}
                               </span>
                             </div>
@@ -816,114 +834,128 @@ export default function AnalyticsDashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Menu Profitability matrix */}
-          <Card className="border border-neutral-200 bg-white rounded-2xl shadow-sm overflow-hidden">
-            <CardHeader className="p-4 border-b border-neutral-100 flex flex-row items-center gap-2">
-              <Layers className="h-4 w-4 text-neutral-500" />
-              <CardTitle className="text-sm font-bold text-neutral-800">
-                Menu Engineering Profitability Matrix (Sales Volume vs. Margin)
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* STARS */}
-                <div className="bg-emerald-50/40 border-2 border-emerald-100 rounded-2xl p-4 flex flex-col justify-between hover:shadow-md transition-all duration-300">
-                  <div>
-                    <div className="flex justify-between items-start">
-                      <Badge className="bg-emerald-600 hover:bg-emerald-755 text-white border-0 text-xxs font-extrabold px-2.5 py-0.5 rounded-lg uppercase tracking-wide">
-                        Stars
-                      </Badge>
-                      <span className="text-xxs text-emerald-600 font-extrabold">High Margin • High Popularity</span>
-                    </div>
-                    <p className="text-xxs text-neutral-500 mt-1.5 leading-relaxed">
-                      High volume, high profit margin. Promote aggressively on the menu and feature prominently. Keep recipes consistent.
-                    </p>
-                    <ul className="text-xs text-neutral-800 font-semibold space-y-1.5 mt-3">
-                      {stars.length > 0 ? stars.map(d => (
-                        <li key={d} className="flex items-center gap-1.5 bg-white border border-emerald-100 rounded-lg px-2 py-1 shadow-sm text-emerald-950">
-                          <span className="text-emerald-500 font-bold">★</span> {d}
-                        </li>
-                      )) : (
-                        <li className="text-neutral-400 italic text-xxs">No dishes classified here yet.</li>
-                      )}
-                    </ul>
-                  </div>
+          {/* Menu Profitability matrix (RESTRICTED TO ADMINS ONLY) */}
+          {userRole !== 'admin' ? (
+            <Card className="border border-neutral-200 bg-neutral-50/50 rounded-2xl p-6 text-center shadow-sm">
+              <div className="flex flex-col items-center justify-center space-y-2">
+                <div className="bg-neutral-200 text-neutral-700 p-3 rounded-full">
+                  <Lock className="h-6 w-6" />
                 </div>
-
-                {/* Hidden Gems / Puzzles */}
-                <div className="bg-indigo-50/40 border-2 border-indigo-100 rounded-2xl p-4 flex flex-col justify-between hover:shadow-md transition-all duration-300">
-                  <div>
-                    <div className="flex justify-between items-start">
-                      <Badge className="bg-indigo-600 hover:bg-indigo-700 text-white border-0 text-xxs font-extrabold px-2.5 py-0.5 rounded-lg uppercase tracking-wide">
-                        Hidden Gems (Puzzles)
-                      </Badge>
-                      <span className="text-xxs text-indigo-600 font-extrabold">High Margin • Low Popularity</span>
-                    </div>
-                    <p className="text-xxs text-neutral-500 mt-1.5 leading-relaxed">
-                      Highly profitable, but low sales volume. Consider bundling with popular items, offering minor discounts, or renaming them.
-                    </p>
-                    <ul className="text-xs text-neutral-800 font-semibold space-y-1.5 mt-3">
-                      {puzzles.length > 0 ? puzzles.map(d => (
-                        <li key={d} className="flex items-center gap-1.5 bg-white border border-indigo-100 rounded-lg px-2 py-1 shadow-sm text-indigo-950">
-                          <span className="text-indigo-500 font-bold">★</span> {d}
-                        </li>
-                      )) : (
-                        <li className="text-neutral-400 italic text-xxs">No dishes classified here yet.</li>
-                      )}
-                    </ul>
-                  </div>
-                </div>
-
-                {/* Plowhorses */}
-                <div className="bg-amber-50/40 border-2 border-amber-100 rounded-2xl p-4 flex flex-col justify-between hover:shadow-md transition-all duration-300">
-                  <div>
-                    <div className="flex justify-between items-start">
-                      <Badge className="bg-amber-600 hover:bg-amber-700 text-white border-0 text-xxs font-extrabold px-2.5 py-0.5 rounded-lg uppercase tracking-wide">
-                        Plowhorses
-                      </Badge>
-                      <span className="text-xxs text-amber-600 font-extrabold">Low Margin • High Popularity</span>
-                    </div>
-                    <p className="text-xxs text-neutral-500 mt-1.5 leading-relaxed">
-                      Very popular, but expensive to make. Consider subtle price increases, adjusting ingredient proportions, or pushing high-margin add-ons.
-                    </p>
-                    <ul className="text-xs text-neutral-800 font-semibold space-y-1.5 mt-3">
-                      {plowhorses.length > 0 ? plowhorses.map(d => (
-                        <li key={d} className="flex items-center gap-1.5 bg-white border border-amber-100 rounded-lg px-2 py-1 shadow-sm text-amber-950">
-                          <span className="text-amber-500 font-bold">★</span> {d}
-                        </li>
-                      )) : (
-                        <li className="text-neutral-400 italic text-xxs">No dishes classified here yet.</li>
-                      )}
-                    </ul>
-                  </div>
-                </div>
-
-                {/* Cut Candidates / Dogs */}
-                <div className="bg-red-50/40 border-2 border-red-100 rounded-2xl p-4 flex flex-col justify-between hover:shadow-md transition-all duration-300">
-                  <div>
-                    <div className="flex justify-between items-start">
-                      <Badge className="bg-red-600 hover:bg-red-750 text-white border-0 text-xxs font-extrabold px-2.5 py-0.5 rounded-lg uppercase tracking-wide">
-                        Cut Candidates (Dogs)
-                      </Badge>
-                      <span className="text-xxs text-red-600 font-extrabold">Low Margin • Low Popularity</span>
-                    </div>
-                    <p className="text-xxs text-neutral-500 mt-1.5 leading-relaxed">
-                      Low sales volume and low profitability. Candidates for removal, complete recipe redesign, or replacement with more seasonal options.
-                    </p>
-                    <ul className="text-xs text-neutral-800 font-semibold space-y-1.5 mt-3">
-                      {dogs.length > 0 ? dogs.map(d => (
-                        <li key={d} className="flex items-center gap-1.5 bg-white border border-red-100 rounded-lg px-2 py-1 shadow-sm text-red-950">
-                          <span className="text-red-500 font-bold">★</span> {d}
-                        </li>
-                      )) : (
-                        <li className="text-neutral-400 italic text-xxs">No dishes classified here yet.</li>
-                      )}
-                    </ul>
-                  </div>
-                </div>
+                <h3 className="text-sm font-bold text-neutral-800">Admin Privileges Required</h3>
+                <p className="text-xs text-neutral-500 max-w-md">
+                  Menu Engineering matrix, recipe ingredient costs, and profit margin statistics are restricted to Restaurant Administrators. Non-admin staff do not have access to financial margins.
+                </p>
               </div>
-            </CardContent>
-          </Card>
+            </Card>
+          ) : (
+            <Card className="border border-neutral-200 bg-white rounded-2xl shadow-sm overflow-hidden">
+              <CardHeader className="p-4 border-b border-neutral-100 flex flex-row items-center gap-2">
+                <Layers className="h-4 w-4 text-neutral-500" />
+                <CardTitle className="text-sm font-bold text-neutral-800">
+                  Menu Engineering Profitability Matrix (Sales Volume vs. Margin)
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* STARS */}
+                  <div className="bg-emerald-50/40 border-2 border-emerald-100 rounded-2xl p-4 flex flex-col justify-between hover:shadow-md transition-all duration-300">
+                    <div>
+                      <div className="flex justify-between items-start">
+                        <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white border-0 text-xxs font-extrabold px-2.5 py-0.5 rounded-lg uppercase tracking-wide">
+                          Stars
+                        </Badge>
+                        <span className="text-xxs text-emerald-600 font-extrabold">High Margin • High Popularity</span>
+                      </div>
+                      <p className="text-xxs text-neutral-500 mt-1.5 leading-relaxed">
+                        High volume, high profit margin. Promote aggressively on the menu and feature prominently. Keep recipes consistent.
+                      </p>
+                      <ul className="text-xs text-neutral-800 font-semibold space-y-1.5 mt-3">
+                        {stars.length > 0 ? stars.map(d => (
+                          <li key={d} className="flex items-center gap-1.5 bg-white border border-emerald-100 rounded-lg px-2 py-1 shadow-sm text-emerald-950">
+                            <span className="text-emerald-500 font-bold">★</span> {d}
+                          </li>
+                        )) : (
+                          <li className="text-neutral-400 italic text-xxs">No dishes classified here yet.</li>
+                        )}
+                      </ul>
+                    </div>
+                  </div>
+
+                  {/* Hidden Gems / Puzzles */}
+                  <div className="bg-indigo-50/40 border-2 border-indigo-100 rounded-2xl p-4 flex flex-col justify-between hover:shadow-md transition-all duration-300">
+                    <div>
+                      <div className="flex justify-between items-start">
+                        <Badge className="bg-indigo-600 hover:bg-indigo-700 text-white border-0 text-xxs font-extrabold px-2.5 py-0.5 rounded-lg uppercase tracking-wide">
+                          Hidden Gems (Puzzles)
+                        </Badge>
+                        <span className="text-xxs text-indigo-600 font-extrabold">High Margin • Low Popularity</span>
+                      </div>
+                      <p className="text-xxs text-neutral-500 mt-1.5 leading-relaxed">
+                        Highly profitable, but low sales volume. Consider bundling with popular items, offering minor discounts, or renaming them.
+                      </p>
+                      <ul className="text-xs text-neutral-800 font-semibold space-y-1.5 mt-3">
+                        {puzzles.length > 0 ? puzzles.map(d => (
+                          <li key={d} className="flex items-center gap-1.5 bg-white border border-indigo-100 rounded-lg px-2 py-1 shadow-sm text-indigo-950">
+                            <span className="text-indigo-500 font-bold">★</span> {d}
+                          </li>
+                        )) : (
+                          <li className="text-neutral-400 italic text-xxs">No dishes classified here yet.</li>
+                        )}
+                      </ul>
+                    </div>
+                  </div>
+
+                  {/* Plowhorses */}
+                  <div className="bg-amber-50/40 border-2 border-amber-100 rounded-2xl p-4 flex flex-col justify-between hover:shadow-md transition-all duration-300">
+                    <div>
+                      <div className="flex justify-between items-start">
+                        <Badge className="bg-amber-600 hover:bg-amber-700 text-white border-0 text-xxs font-extrabold px-2.5 py-0.5 rounded-lg uppercase tracking-wide">
+                          Plowhorses
+                        </Badge>
+                        <span className="text-xxs text-amber-600 font-extrabold">Low Margin • High Popularity</span>
+                      </div>
+                      <p className="text-xxs text-neutral-500 mt-1.5 leading-relaxed">
+                        Very popular, but expensive to make. Consider subtle price increases, adjusting ingredient proportions, or pushing high-margin add-ons.
+                      </p>
+                      <ul className="text-xs text-neutral-800 font-semibold space-y-1.5 mt-3">
+                        {plowhorses.length > 0 ? plowhorses.map(d => (
+                          <li key={d} className="flex items-center gap-1.5 bg-white border border-amber-100 rounded-lg px-2 py-1 shadow-sm text-amber-950">
+                            <span className="text-amber-500 font-bold">★</span> {d}
+                          </li>
+                        )) : (
+                          <li className="text-neutral-400 italic text-xxs">No dishes classified here yet.</li>
+                        )}
+                      </ul>
+                    </div>
+                  </div>
+
+                  {/* Cut Candidates / Dogs */}
+                  <div className="bg-red-50/40 border-2 border-red-100 rounded-2xl p-4 flex flex-col justify-between hover:shadow-md transition-all duration-300">
+                    <div>
+                      <div className="flex justify-between items-start">
+                        <Badge className="bg-red-600 hover:bg-red-750 text-white border-0 text-xxs font-extrabold px-2.5 py-0.5 rounded-lg uppercase tracking-wide">
+                          Cut Candidates (Dogs)
+                        </Badge>
+                        <span className="text-xxs text-red-600 font-extrabold">Low Margin • Low Popularity</span>
+                      </div>
+                      <p className="text-xxs text-neutral-500 mt-1.5 leading-relaxed">
+                        Low sales volume and low profitability. Candidates for removal, complete recipe redesign, or replacement with more seasonal options.
+                      </p>
+                      <ul className="text-xs text-neutral-800 font-semibold space-y-1.5 mt-3">
+                        {dogs.length > 0 ? dogs.map(d => (
+                          <li key={d} className="flex items-center gap-1.5 bg-white border border-red-100 rounded-lg px-2 py-1 shadow-sm text-red-950">
+                            <span className="text-red-500 font-bold">★</span> {d}
+                          </li>
+                        )) : (
+                          <li className="text-neutral-400 italic text-xxs">No dishes classified here yet.</li>
+                        )}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
     </div>

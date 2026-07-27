@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
-import { LogOut, Coffee, ArrowLeftRight, ShoppingBag } from "lucide-react";
+import { LogOut, Coffee, ShoppingBag, Menu, X, ShieldAlert } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
 const NAV_ITEMS = [
@@ -31,7 +31,7 @@ export function StaffSidebar() {
 
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [switchingRole, setSwitchingRole] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     async function loadUserAndProfile() {
@@ -49,8 +49,12 @@ export function StaffSidebar() {
     loadUserAndProfile();
   }, [supabase]);
 
+  // Close mobile drawer on route change
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
   const handleLogout = async () => {
-    // Completely clear all cached state starting with 'kaizen_'
     Object.keys(localStorage).forEach((key) => {
       if (key.startsWith('kaizen_')) {
         localStorage.removeItem(key)
@@ -61,13 +65,21 @@ export function StaffSidebar() {
     router.refresh();
   };
 
-  return (
-    <nav className="flex h-screen w-60 shrink-0 flex-col justify-between border-r border-sidebar-border bg-sidebar p-4 text-sidebar-foreground">
+  const navContent = (
+    <div className="flex h-full flex-col justify-between p-4 text-sidebar-foreground">
       <div className="space-y-4">
         {/* Brand/Portal header */}
-        <div className="flex items-center gap-2 px-2 py-1">
-          <Coffee className="h-5 w-5 text-amber-600 animate-pulse" />
-          <span className="font-extrabold text-base tracking-tight text-neutral-800">KAIZEN STAFF</span>
+        <div className="flex items-center justify-between px-2 py-1">
+          <div className="flex items-center gap-2">
+            <Coffee className="h-5 w-5 text-amber-600 animate-pulse" />
+            <span className="font-extrabold text-base tracking-tight text-neutral-800">KAIZEN STAFF</span>
+          </div>
+          <button 
+            onClick={() => setMobileOpen(false)}
+            className="md:hidden p-1 text-neutral-500 hover:text-neutral-900"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
         {/* Sidebar Nav Links */}
@@ -114,7 +126,7 @@ export function StaffSidebar() {
         <div className="flex flex-col gap-1.5 pt-1">
           <Link
             href="/menu"
-            className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 px-3 py-2 text-xxs font-extrabold text-neutral-700 transition-colors shadow-xxs animate-fade-in"
+            className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 px-3 py-2 text-xxs font-extrabold text-neutral-700 transition-colors shadow-xxs"
           >
             <ShoppingBag className="h-3.5 w-3.5 text-neutral-500" />
             <span>Customer Menu</span>
@@ -129,6 +141,43 @@ export function StaffSidebar() {
           </button>
         </div>
       </div>
-    </nav>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Desktop Sidebar (hidden on mobile) */}
+      <aside className="hidden md:flex h-screen w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
+        {navContent}
+      </aside>
+
+      {/* Mobile Top Navbar (visible on mobile only) */}
+      <div className="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-neutral-200 sticky top-0 z-40">
+        <div className="flex items-center gap-2">
+          <Coffee className="h-5 w-5 text-amber-600 animate-pulse" />
+          <span className="font-extrabold text-sm tracking-tight text-neutral-800">KAIZEN STAFF</span>
+        </div>
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="p-2 rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-700 hover:bg-neutral-100"
+          aria-label="Toggle navigation menu"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+      </div>
+
+      {/* Mobile Slide-out Drawer */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 flex md:hidden">
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setMobileOpen(false)}
+          />
+          <div className="relative flex flex-col w-4/5 max-w-xs bg-sidebar h-full shadow-2xl z-10 animate-in slide-in-from-left duration-200">
+            {navContent}
+          </div>
+        </div>
+      )}
+    </>
   );
 }
