@@ -61,7 +61,7 @@ export function StaffSidebar() {
       }
     });
     await supabase.auth.signOut();
-    router.push("/login");
+    router.push("/signup");
     router.refresh();
   };
 

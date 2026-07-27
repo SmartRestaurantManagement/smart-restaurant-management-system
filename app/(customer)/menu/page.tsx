@@ -19,7 +19,7 @@ export default async function MenuPage() {
   return (
     <div className="bg-neutral-50/20 min-h-screen">
       {/* Hero section */}
-      <div className="bg-gradient-to-br from-neutral-900 via-neutral-800 to-amber-950 text-white py-12 px-4 shadow-sm">
+      <div className="bg-gradient-to-br from-charcoal via-neutral-900 to-terracotta/30 text-charcoal-foreground py-12 px-4 shadow-sm">
         <div className="max-w-5xl mx-auto space-y-2">
           <span className="text-amber-500 font-bold text-xs uppercase tracking-widest">
             Welcome to Kaizen Dine-In

@@ -19,6 +19,6 @@ export async function GET(request: Request) {
     }
   }
 
-  // Redirect to login page with error query parameter if verification fails
-  return NextResponse.redirect(new URL('/login?error=verification-failed', request.url))
+  // Redirect to signup page with error query parameter if verification fails
+  return NextResponse.redirect(new URL('/signup?error=verification-failed', request.url))
 }

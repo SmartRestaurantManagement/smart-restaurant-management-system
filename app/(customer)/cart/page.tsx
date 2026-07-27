@@ -254,11 +254,11 @@ export default function CartPage() {
           <ShieldAlert className="h-8 w-8" />
         </div>
         <div className="space-y-1">
-          <h3 className="text-lg font-bold text-neutral-800">Login Required</h3>
-          <p className="text-sm text-neutral-500">Please log in to your account to review your cart and place order.</p>
+          <h3 className="text-lg font-bold text-neutral-800">Sign Up Required</h3>
+          <p className="text-sm text-neutral-500">Please sign up with your email to review your cart and place order.</p>
         </div>
-        <Button onClick={() => router.push('/login')} className="bg-neutral-900 text-white rounded-xl">
-          Log In
+        <Button onClick={() => router.push('/signup')} className="bg-terracotta text-terracotta-foreground hover:bg-terracotta/90 rounded-xl">
+          Sign Up
         </Button>
       </div>
     )
@@ -274,7 +274,7 @@ export default function CartPage() {
           <h3 className="text-lg font-bold text-neutral-800">Your Cart is Empty</h3>
           <p className="text-sm text-neutral-500">Go back to the menu and select delicious items to order.</p>
         </div>
-        <Button onClick={() => router.push('/menu')} className="bg-neutral-900 text-white rounded-xl">
+        <Button onClick={() => router.push('/menu')} className="bg-terracotta text-terracotta-foreground hover:bg-terracotta/90 rounded-xl">
           Browse Menu
         </Button>
       </div>
@@ -433,7 +433,7 @@ export default function CartPage() {
         <Button 
           disabled={placing || checkingAllergens || allergenConflict?.blocked} 
           onClick={handlePlaceOrder}
-          className="w-full bg-neutral-900 text-white font-bold rounded-2xl py-3 shadow-md transition-all active:scale-99"
+          className="w-full bg-terracotta text-terracotta-foreground hover:bg-terracotta/90 font-bold rounded-2xl py-3 shadow-md transition-all active:scale-99"
         >
           {checkingAllergens 
             ? 'Safety checking...' 

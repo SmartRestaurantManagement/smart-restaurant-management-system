@@ -198,7 +198,7 @@ export default function ReorderPage() {
         <div className="text-center py-12 bg-white border border-dashed border-neutral-200 rounded-3xl space-y-3">
           <ShoppingBag className="h-8 w-8 text-neutral-400 mx-auto" />
           <p className="text-sm text-neutral-500">No past order history found on this browser yet.</p>
-          <Button onClick={() => router.push('/menu')} className="bg-neutral-900 text-white rounded-xl text-xs font-semibold">
+          <Button onClick={() => router.push('/menu')} className="bg-terracotta text-terracotta-foreground hover:bg-terracotta/90 rounded-xl text-xs font-semibold">
             Make your first order
           </Button>
         </div>

@@ -6,7 +6,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { useCart } from '@/lib/cart/cart-context'
 import { useTableSession } from '@/lib/cart/table-session'
 import { createClient } from '@/lib/supabase/client'
-import { ShoppingBag, Clock, History, LogOut, Coffee, LayoutDashboard, ArrowLeftRight, User } from 'lucide-react'
+import { ShoppingBag, Clock, History, LogOut, Coffee, LayoutDashboard, User } from 'lucide-react'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 interface UserProfile {
@@ -23,8 +23,11 @@ export function CustomerHeader() {
   // Auth state
   const [user, setUser] = useState<SupabaseUser | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
-  
-  // Staff Modal state
+
+  // Staff Modal state - a separate hardcoded username/password gate for
+  // dashboard access, independent of the customer's own email/OTP identity
+  // or profiles.role. Whoever knows these credentials gets in, regardless
+  // of which account (if any) they're signed into as a customer.
   const [showStaffModal, setShowStaffModal] = useState(false)
   const [staffUsername, setStaffUsername] = useState('')
   const [staffPassword, setStaffPassword] = useState('')
@@ -87,14 +90,15 @@ export function CustomerHeader() {
     const targetUsername = staffUsername.trim()
     const targetPassword = staffPassword
 
-    // Configured static username and passwords
+    // Configured static username and passwords - deliberately not tied to
+    // the signed-in customer's own email/profile role.
     const expectedAdminUser = process.env.NEXT_PUBLIC_DASHBOARD_ADMIN_USER || 'admin'
     const expectedAdminPass = process.env.NEXT_PUBLIC_DASHBOARD_ADMIN_PASS || 'admin123'
     const expectedStaffUser = process.env.NEXT_PUBLIC_DASHBOARD_STAFF_USER || 'staff'
     const expectedStaffPass = process.env.NEXT_PUBLIC_DASHBOARD_STAFF_PASS || 'staff123'
 
     let supabaseEmail = ''
-    let supabasePassword = 'KaizenDemo123!'
+    const supabasePassword = 'KaizenDemo123!'
 
     if (targetUsername === expectedAdminUser && targetPassword === expectedAdminPass) {
       supabaseEmail = 'ananya.rao@kaizen.demo'
@@ -147,7 +151,7 @@ export function CustomerHeader() {
     })
 
     await supabase.auth.signOut()
-    router.push('/login')
+    router.push('/signup')
     router.refresh()
   }
 
@@ -215,7 +219,7 @@ export function CustomerHeader() {
           {/* Cart Trigger */}
           <Link 
             href="/cart"
-            className="relative flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/95 transition-all shadow-sm rounded-full px-4 py-2 text-sm font-medium"
+            className="relative flex items-center gap-2 bg-terracotta text-terracotta-foreground hover:bg-terracotta/90 transition-all shadow-sm rounded-full px-4 py-2 text-sm font-medium"
           >
             <ShoppingBag className="h-4 w-4" />
             <span>Cart</span>
@@ -242,7 +246,7 @@ export function CustomerHeader() {
                   <span>Dashboard</span>
                 </Link>
               ) : (
-                /* Show Staff Access login for customer users */
+                /* Dashboard access is gated by a separate staff username/password, not this account */
                 <button
                   onClick={() => setShowStaffModal(true)}
                   className="flex items-center gap-1 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xxs font-extrabold px-2.5 py-1.5 rounded-xl border border-amber-200 transition-colors cursor-pointer"
@@ -264,19 +268,19 @@ export function CustomerHeader() {
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <button 
+              <button
                 onClick={() => setShowStaffModal(true)}
                 className="flex items-center gap-1.5 bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-bold px-3 py-1.5 rounded-xl transition-all shadow-sm cursor-pointer"
               >
                 <LayoutDashboard className="h-3.5 w-3.5" />
                 <span>Staff Access</span>
               </button>
-              <Link 
-                href="/login" 
-                className="text-xs font-bold text-neutral-600 hover:text-neutral-900 bg-neutral-100 hover:bg-neutral-200 px-3.5 py-2 rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
+              <Link
+                href="/signup"
+                className="text-xs font-bold text-terracotta hover:text-terracotta-foreground bg-terracotta/10 hover:bg-terracotta px-3.5 py-2 rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
               >
                 <User className="h-3.5 w-3.5" />
-                <span>Login Portal</span>
+                <span>Sign Up</span>
               </Link>
             </div>
           )}
@@ -287,7 +291,7 @@ export function CustomerHeader() {
       {showStaffModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl border border-neutral-100 relative animate-in fade-in zoom-in-95 duration-200">
-            <button 
+            <button
               onClick={() => {
                 setShowStaffModal(false)
                 setStaffError('')
@@ -296,12 +300,12 @@ export function CustomerHeader() {
               }}
               className="absolute top-4 right-4 text-neutral-400 hover:text-neutral-600 transition-colors text-lg font-bold w-6 h-6 flex items-center justify-center rounded-full hover:bg-neutral-100"
             >
-              ✕
+              &times;
             </button>
             <div className="space-y-4">
               <div className="text-center">
-                <div className="mx-auto w-10 h-10 bg-amber-50 rounded-full flex items-center justify-center mb-2">
-                  <Coffee className="h-5 w-5 text-amber-600" />
+                <div className="mx-auto w-10 h-10 bg-terracotta/10 rounded-full flex items-center justify-center mb-2">
+                  <Coffee className="h-5 w-5 text-terracotta" />
                 </div>
                 <h2 className="text-base font-extrabold text-neutral-800">Staff & Admin Access</h2>
                 <p className="text-xs text-neutral-500 mt-1">Provide credentials to enter the dashboard.</p>
@@ -316,7 +320,7 @@ export function CustomerHeader() {
                     placeholder="e.g. admin"
                     value={staffUsername}
                     onChange={(e) => setStaffUsername(e.target.value)}
-                    className="w-full text-xs border border-neutral-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all text-neutral-800"
+                    className="w-full text-xs border border-neutral-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-terracotta/20 focus:border-terracotta transition-all text-neutral-800"
                   />
                 </div>
                 <div>
@@ -327,7 +331,7 @@ export function CustomerHeader() {
                     placeholder="••••••••"
                     value={staffPassword}
                     onChange={(e) => setStaffPassword(e.target.value)}
-                    className="w-full text-xs border border-neutral-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all text-neutral-800"
+                    className="w-full text-xs border border-neutral-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-terracotta/20 focus:border-terracotta transition-all text-neutral-800"
                   />
                 </div>
 
@@ -340,7 +344,7 @@ export function CustomerHeader() {
                 <button
                   type="submit"
                   disabled={verifyingStaff}
-                  className="w-full bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl py-2.5 text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  className="w-full bg-terracotta hover:bg-terracotta/90 text-terracotta-foreground rounded-xl py-2.5 text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-50"
                 >
                   {verifyingStaff ? 'Verifying...' : 'Access Dashboard'}
                 </button>

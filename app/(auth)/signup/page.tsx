@@ -2,13 +2,13 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { getAuthErrorMessage } from '@/lib/auth/get-auth-error-message'
+import { Button } from '@/components/ui/button'
+import { Coffee } from 'lucide-react'
 
 export default function SignupPage() {
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
@@ -19,7 +19,10 @@ export default function SignupPage() {
     setLoading(true)
     setError('')
 
-    const { error } = await supabase.auth.signUp({ email, password })
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: true },
+    })
 
     setLoading(false)
 
@@ -32,37 +35,37 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="max-w-sm mx-auto mt-20 space-y-6">
-      <form onSubmit={handleSignup} className="space-y-4">
-        <h1 className="text-2xl font-bold">Create account</h1>
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          className="w-full border rounded px-3 py-2"
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          minLength={6}
-          className="w-full border rounded px-3 py-2"
-        />
-        {error && <p className="text-red-500 text-sm">{error}</p>}
-        <button disabled={loading} className="w-full bg-black text-white rounded px-3 py-2 font-semibold">
-          {loading ? 'Signing up...' : 'Sign up'}
-        </button>
-      </form>
-      <p className="text-sm text-neutral-500 text-center">
-        Already have an account?{' '}
-        <Link href="/login" className="text-black font-semibold underline">
-          Log in
-        </Link>
-      </p>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-amber-50 via-white to-amber-50/40 px-4">
+      <div className="w-full max-w-sm rounded-2xl border border-neutral-200 bg-white shadow-lg shadow-terracotta/5 overflow-hidden">
+        <div className="text-center space-y-2 pt-8 px-6">
+          <div className="mx-auto w-12 h-12 rounded-full bg-terracotta/10 flex items-center justify-center">
+            <Coffee className="h-6 w-6 text-terracotta" />
+          </div>
+          <h1 className="text-2xl font-extrabold tracking-tight text-neutral-800">Sign up for Kaizen</h1>
+          <p className="text-sm text-neutral-500">
+            Enter your email and we&apos;ll send you a one-time code - no password needed.
+          </p>
+        </div>
+
+        <form onSubmit={handleSignup} className="space-y-4 px-6 pb-8 pt-6">
+          <input
+            type="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="w-full rounded-xl border border-neutral-200 px-4 py-2.5 text-sm text-neutral-800 transition-all focus:border-terracotta focus:outline-none focus:ring-2 focus:ring-terracotta/25"
+          />
+          {error && <p className="text-sm text-red-500">{error}</p>}
+          <Button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-xl bg-terracotta py-5 text-sm font-bold text-terracotta-foreground hover:bg-terracotta/90"
+          >
+            {loading ? 'Sending code...' : 'Continue'}
+          </Button>
+        </form>
+      </div>
     </div>
   )
 }

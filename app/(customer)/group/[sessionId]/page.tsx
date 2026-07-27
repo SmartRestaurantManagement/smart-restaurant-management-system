@@ -201,7 +201,7 @@ export default function GroupSessionPage({
       <div className="max-w-md mx-auto py-20 px-4 text-center space-y-4">
         <h3 className="text-lg font-bold text-neutral-800">Session Error</h3>
         <p className="text-sm text-neutral-500">{error || 'No active session found.'}</p>
-        <Button onClick={() => router.push('/menu')} className="bg-neutral-900 text-white rounded-xl">
+        <Button onClick={() => router.push('/menu')} className="bg-terracotta text-terracotta-foreground hover:bg-terracotta/90 rounded-xl">
           Back to Menu
         </Button>
       </div>
@@ -232,7 +232,7 @@ export default function GroupSessionPage({
           <Button
             size="sm"
             onClick={() => router.push('/menu')}
-            className="bg-neutral-900 text-white font-semibold text-xs px-3 py-1.5 rounded-xl"
+            className="bg-terracotta text-terracotta-foreground hover:bg-terracotta/90 font-semibold text-xs px-3 py-1.5 rounded-xl"
           >
             Add More Dishes
           </Button>
@@ -346,7 +346,7 @@ export default function GroupSessionPage({
                     />
                     <Button
                       onClick={handleAddParticipant}
-                      className="bg-neutral-900 text-white text-xs font-semibold px-4 py-2 rounded-xl shrink-0"
+                      className="bg-terracotta text-terracotta-foreground hover:bg-terracotta/90 text-xs font-semibold px-4 py-2 rounded-xl shrink-0"
                     >
                       Add Friend
                     </Button>

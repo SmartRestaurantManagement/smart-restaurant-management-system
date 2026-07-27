@@ -5,8 +5,34 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Allow public authentication paths and static/API paths
-  const publicPaths = ['/login', '/signup', '/verify-otp', '/auth/confirm']
+  const publicPaths = ['/signup', '/verify-otp', '/auth/confirm']
   const isPublicPath = publicPaths.some(path => pathname.startsWith(path))
+
+  // /dashboard is gated by its own shared PIN (app/(staff)/dashboard/layout.tsx),
+  // not Supabase Auth - staff never log in at all, so this middleware must not
+  // require a Supabase session to reach it.
+  const isPinGatedPath = pathname.startsWith('/dashboard')
+
+  // The marketing/hero landing page is public - anonymous visitors need to
+  // see it. Logged-in users are still bounced past it to their home page
+  // below (isPublicPath || pathname === '/' branch).
+  const isLandingPath = pathname === '/'
+
+  // /menu must be browsable without an account - the landing page's
+  // secondary "browse the menu" link, and the menu's own client-side
+  // "sign up to order" prompts (client-menu.tsx, add-to-cart-button.tsx),
+  // both depend on anonymous visitors actually being able to reach it.
+  const isBrowsablePath = pathname.startsWith('/menu')
+
+  // Neither rule below ever reads `user` for these two path types (rule 1 is
+  // bypassed for both, rule 2 only applies to isPublicPath/"/"), so skip the
+  // Supabase auth round-trip entirely instead of paying for it and throwing
+  // the result away. /dashboard also does its own auth check in
+  // app/(staff)/dashboard/layout.tsx right after this, so skipping here
+  // halves the auth latency for every dashboard navigation.
+  if (isPinGatedPath || isBrowsablePath) {
+    return NextResponse.next({ request })
+  }
 
   let supabaseResponse = NextResponse.next({
     request,
@@ -37,16 +63,16 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // 1. If not logged in and trying to access a protected page, redirect to /login
-  if (!user && !isPublicPath) {
+  // 1. If not logged in and trying to access a protected page, redirect to /signup
+  if (!user && !isPublicPath && !isPinGatedPath && !isLandingPath && !isBrowsablePath) {
     const url = request.nextUrl.clone()
-    url.pathname = '/login'
+    url.pathname = '/signup'
     return NextResponse.redirect(url)
   }
 
   // 2. If logged in:
   if (user) {
-    // If they are on a public path (like /login or /signup) or at the root "/", redirect them to their home page
+    // If they are on a public path (like /signup) or at the root "/", redirect them to their home page
     if (isPublicPath || pathname === '/') {
       const { data: profile } = await supabase
         .from('profiles')
