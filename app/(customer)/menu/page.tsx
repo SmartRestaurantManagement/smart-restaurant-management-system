@@ -1,5 +1,6 @@
 import { getMenu } from '@/lib/menu/get-menu'
 import { ClientMenu } from '@/components/customer/client-menu'
+import { MenuItemPairing } from '@/components/customer/menu-item-pairing'
 
 export const dynamic = 'force-dynamic'
 
