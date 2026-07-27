@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { explainAllergenConflict, generateAnalyticsInsights } from "@/lib/ai/gemini";
 
 export async function POST(request: NextRequest) {
@@ -63,8 +62,12 @@ export async function POST(request: NextRequest) {
         weather_condition,
         temp_max_c
       );
-      console.log(`[API AI Insights] Successfully generated insights using provider: ${result.provider}`);
-      return NextResponse.json({ insights: result.insights, provider: result.provider });
+      console.log(`[API AI Insights] Generated insights using provider: ${result.provider}. Error if any: ${result.error || "none"}`);
+      return NextResponse.json({ 
+        insights: result.insights, 
+        provider: result.provider,
+        error: result.error || null 
+      });
     } catch (e) {
       console.error("[API AI Insights] Error generating insights:", e);
       return NextResponse.json(

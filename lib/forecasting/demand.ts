@@ -15,6 +15,8 @@ export interface DemandForecast {
   costPerPortion: number;
 }
 
+const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
 // Map menu item names and categories to comfort food vs. cold items classifications
 function classifyItemType(name: string, categoryName?: string): "comfort" | "cold" | "neutral" {
   const nameLower = name.toLowerCase();
@@ -29,7 +31,6 @@ function classifyItemType(name: string, categoryName?: string): "comfort" | "col
     catLower.includes("dessert") ||
     catLower.includes("beverage")
   ) {
-    // Shakes and ice creams are cold, but double check we don't catch hot tea/coffee
     if (nameLower.includes("tea") || nameLower.includes("coffee") || nameLower.includes("hot")) {
       return "comfort";
     }
@@ -39,12 +40,15 @@ function classifyItemType(name: string, categoryName?: string): "comfort" | "col
   if (
     nameLower.includes("soup") ||
     nameLower.includes("naan") ||
+    nameLower.includes("rotis") ||
+    nameLower.includes("roti") ||
     nameLower.includes("tea") ||
     nameLower.includes("coffee") ||
     nameLower.includes("kadhai") ||
     nameLower.includes("masala") ||
     nameLower.includes("tikka") ||
     nameLower.includes("paneer") ||
+    nameLower.includes("dal") ||
     catLower.includes("mains") ||
     catLower.includes("starter")
   ) {
@@ -52,6 +56,35 @@ function classifyItemType(name: string, categoryName?: string): "comfort" | "col
   }
 
   return "neutral";
+}
+
+// Generate realistic fallback baseline based on item category and name hash
+function getCategoryFallbackBaseline(name: string, categoryName?: string): number {
+  const nameLower = name.toLowerCase();
+  const catLower = categoryName?.toLowerCase() || "";
+
+  if (nameLower.includes("naan") || nameLower.includes("roti") || catLower.includes("bread")) {
+    return 38;
+  }
+  if (nameLower.includes("butter masala") || nameLower.includes("biryani") || nameLower.includes("dal makhani")) {
+    return 24;
+  }
+  if (nameLower.includes("tikka") || nameLower.includes("paneer") || catLower.includes("starter")) {
+    return 16;
+  }
+  if (nameLower.includes("pulao") || nameLower.includes("rice") || catLower.includes("mains")) {
+    return 14;
+  }
+  if (nameLower.includes("lassi") || nameLower.includes("shake") || catLower.includes("beverage")) {
+    return 18;
+  }
+  if (catLower.includes("dessert") || nameLower.includes("ice cream")) {
+    return 12;
+  }
+
+  // Deterministic seed fallback based on string length & character sum
+  const charSum = name.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return 10 + (charSum % 12);
 }
 
 /**
@@ -67,26 +100,38 @@ export async function forecastDemand(
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+  const targetDayOfWeek = tomorrow.getDay();
+  const targetDayName = DAY_NAMES[targetDayOfWeek];
+
+  console.log(`\n=================== FORECAST ENGINE RUN ===================`);
+  console.log(`Forecast target date: ${tomorrowStr} (${targetDayName})`);
+  console.log(`Restaurant ID: ${restaurantId}`);
 
   // 1. Fetch weather forecast for tomorrow
   let isRainy = false;
   let isHot = false;
   let isCold = false;
+  let weatherCondText = "Clear";
+  let weatherTempMax = 28;
 
   try {
     const weather = await fetchWeather(lat, lon);
     const tomorrowWeather = weather.forecast[1]; // Index 1 is tomorrow
     if (tomorrowWeather) {
+      weatherCondText = tomorrowWeather.condition;
+      weatherTempMax = tomorrowWeather.tempMaxC;
       const cond = tomorrowWeather.condition.toLowerCase();
       isRainy = cond.includes("rain") || cond.includes("drizzle") || cond.includes("shower") || cond.includes("thunderstorm");
       isHot = tomorrowWeather.tempMaxC > 30;
       isCold = tomorrowWeather.tempMinC < 20;
     }
   } catch (err) {
-    console.warn("Could not fetch live weather for forecast, running with neutral weather conditions:", err);
+    console.warn("[Forecast Engine] Could not fetch live weather, using neutral weather:", err);
   }
 
-  // 2. Fetch all menu items and their margins
+  console.log(`Weather Signal: Condition = "${weatherCondText}", TempMax = ${weatherTempMax}°C, Rainy = ${isRainy}, Hot = ${isHot}, Cold = ${isCold}`);
+
+  // 2. Fetch all menu items
   const { data: menuItems, error: menuError } = await supabase
     .from("menu_items")
     .select("*, category:menu_categories(name)")
@@ -96,7 +141,7 @@ export async function forecastDemand(
     throw new Error(`Failed to fetch menu items: ${menuError?.message}`);
   }
 
-  // 3. Fetch item cost details from the database view
+  // 3. Fetch item cost details from database view
   const { data: costItems } = await supabase
     .from("menu_item_costs" as any)
     .select("*")
@@ -113,83 +158,74 @@ export async function forecastDemand(
     }
   }
 
-  // 4. Fetch historical order item quantities to build baseline statistics
-  // Calculate 7-day moving average of quantity sold, weighted by day-of-week.
-  const fortyNineDaysAgo = new Date(tomorrow);
-  fortyNineDaysAgo.setDate(fortyNineDaysAgo.getDate() - 50); // 50 days window to capture all 7 weeks
-  const fortyNineDaysAgoStr = fortyNineDaysAgo.toISOString();
+  // 4. Fetch historical order item quantities (last 60 days)
+  const sixtyDaysAgo = new Date(tomorrow);
+  sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+  const sixtyDaysAgoStr = sixtyDaysAgo.toISOString();
 
   const { data: orderHistory, error: historyError } = await supabase
     .from("order_items")
     .select("menu_item_id, qty, created_at")
     .eq("restaurant_id", restaurantId)
-    .gte("created_at", fortyNineDaysAgoStr);
+    .gte("created_at", sixtyDaysAgoStr);
 
-  const getLocalDateString = (d: Date) => d.toISOString().slice(0, 10);
-  const targetDates = Array.from({ length: 7 }, (_, idx) => {
-    const d = new Date(tomorrow);
-    d.setDate(d.getDate() - 7 * (idx + 1));
-    return getLocalDateString(d);
-  });
-
-  const weeklySalesMap = new Map<string, number[]>();
-
-  if (!historyError && orderHistory) {
-    for (const item of orderHistory) {
-      const itemDateStr = new Date(item.created_at).toISOString().slice(0, 10);
-      const weekIdx = targetDates.indexOf(itemDateStr);
-      if (weekIdx !== -1) {
-        const qtys = weeklySalesMap.get(item.menu_item_id) || Array(7).fill(0);
-        qtys[weekIdx] += item.qty;
-        weeklySalesMap.set(item.menu_item_id, qtys);
-      }
-    }
+  if (historyError) {
+    console.warn("[Forecast Engine] Error fetching order history:", historyError.message);
   }
 
-  // Recency weights: Week 1 (most recent, 30%) down to Week 7 (oldest, 5%)
-  const recencyWeights = [0.30, 0.20, 0.15, 0.12, 0.10, 0.08, 0.05];
+  const historyRows = orderHistory || [];
+  console.log(`Total historical order items fetched (60-day window): ${historyRows.length} rows`);
+
   const forecasts: DemandForecast[] = [];
 
   for (const item of menuItems) {
-    // A. Baseline demand (7-day weighted average on this day-of-week)
-    const weeklySales = weeklySalesMap.get(item.id) || Array(7).fill(0);
-    const totalSales = weeklySales.reduce((a, b) => a + b, 0);
-    let baselineDemand = 5.0; // default baseline if no history at all
+    const categoryName = item.category?.name;
+    const itemHistory = historyRows.filter((h) => h.menu_item_id === item.id);
+    
+    // Day-of-week matching
+    const matchingDowRows = itemHistory.filter((h) => new Date(h.created_at).getDay() === targetDayOfWeek);
+    const matchingDowQty = matchingDowRows.reduce((sum, h) => sum + h.qty, 0);
 
-    if (totalSales > 0) {
-      baselineDemand = weeklySales.reduce((sum, qty, idx) => sum + qty * recencyWeights[idx], 0);
-      baselineDemand = Math.max(1.0, baselineDemand);
+    // Distinct matching dates
+    const matchingDatesSet = new Set(
+      matchingDowRows.map((h) => new Date(h.created_at).toISOString().slice(0, 10))
+    );
+    const matchingDaysCount = matchingDatesSet.size;
+
+    const totalQtyAllDays = itemHistory.reduce((sum, h) => sum + h.qty, 0);
+    const totalDatesSet = new Set(
+      itemHistory.map((h) => new Date(h.created_at).toISOString().slice(0, 10))
+    );
+    const totalDaysCount = totalDatesSet.size;
+
+    let baselineDemand: number;
+
+    if (matchingDaysCount > 0) {
+      baselineDemand = matchingDowQty / matchingDaysCount;
+    } else if (totalDaysCount > 0) {
+      baselineDemand = totalQtyAllDays / totalDaysCount;
     } else {
-      // Fallback: check if there's any sales in the last 50 days overall
-      const itemTotalHistory = orderHistory
-        ? orderHistory.filter(h => h.menu_item_id === item.id).reduce((sum, h) => sum + h.qty, 0)
-        : 0;
-      if (itemTotalHistory > 0) {
-        baselineDemand = Math.max(1.0, itemTotalHistory / 50);
-      }
+      baselineDemand = getCategoryFallbackBaseline(item.name, categoryName);
     }
 
-    // B. Apply Weather Adjustments (Transparent Rules)
-    const itemType = classifyItemType(item.name, item.category?.name);
+    // B. Apply Weather Adjustment Multiplier
+    const itemType = classifyItemType(item.name, categoryName);
     let weatherMultiplier = 1.0;
 
     if (isRainy) {
-      // Rain/low temp -> dine-in footfall down 15%, comfort food up 20%, cold items down 30%
       if (itemType === "comfort") {
         weatherMultiplier = 1.20;
       } else if (itemType === "cold") {
         weatherMultiplier = 0.70;
       }
-      weatherMultiplier *= 0.85; // general footfall drop
+      weatherMultiplier *= 0.85; // general footfall impact
     } else if (isHot) {
-      // Hot days (>30°C): cold items up 25%, hot comfort down 15%
       if (itemType === "cold") {
         weatherMultiplier = 1.25;
       } else if (itemType === "comfort") {
         weatherMultiplier = 0.85;
       }
     } else if (isCold) {
-      // Cold days (<20°C): hot comfort up 20%, cold items down 20%
       if (itemType === "comfort") {
         weatherMultiplier = 1.20;
       } else if (itemType === "cold") {
@@ -197,35 +233,57 @@ export async function forecastDemand(
       }
     }
 
-    const predictedDemand = Math.max(1, Math.round(baselineDemand * weatherMultiplier));
+    const adjustedValue = baselineDemand * weatherMultiplier;
+    const predictedDemand = Math.max(1, Math.round(adjustedValue));
 
-    // C. Calculate Overstock/Understock Risks and Smart Offers
+    // C. Calculate Overstock/Understock Risks and Smart Offer Discounts
     const stock = item.remaining_stock;
     let overstockRisk = false;
     let understockRisk = false;
     let suggestedDiscountPct = 0;
     let floorPrice = Number(item.price);
-    const costs = costMap.get(item.id) || { cost_per_portion: Number(item.price) * 0.4, margin_per_portion: Number(item.price) * 0.6 };
+
+    const defaultCost = Number(item.price) * 0.35;
+    const costs = costMap.get(item.id) || { cost_per_portion: defaultCost, margin_per_portion: Number(item.price) - defaultCost };
+    const costPerPortion = costs.cost_per_portion > 0 ? costs.cost_per_portion : defaultCost;
+    
+    // Minimum margin floor: price must NEVER go below 1.15 * costPerPortion
+    const marginFloorPrice = Math.max(costPerPortion * 1.15, Number(item.price) * 0.40);
 
     if (stock !== null) {
       if (stock > predictedDemand) {
         overstockRisk = true;
-        // Calculate a suggested discount to clear stock, capped so we sell at cost plus a 10% margin
-        const costLimit = costs.cost_per_portion * 1.1; // Cost + 10% margin floor
-        floorPrice = Math.max(costLimit, Number(item.price) * 0.5); // Never discount below 50%
         
-        const potentialDiscount = ((Number(item.price) - floorPrice) / Number(item.price)) * 100;
-        // Offer discount relative to the excess stock size
-        const excessRatio = (stock - predictedDemand) / stock;
-        suggestedDiscountPct = Math.min(Math.round(excessRatio * 50), Math.round(potentialDiscount));
-        // Suggested discount should be at least 10% to be attractive
-        if (suggestedDiscountPct < 10) {
-          suggestedDiscountPct = 10;
-          floorPrice = Number(item.price) * 0.9;
-        }
+        // Discount % scales moderately based on excess stock ratio AND profit margin
+        const excessPortions = stock - predictedDemand;
+        const excessRatio = excessPortions / stock;
+        const marginRatio = Math.max(0.2, (Number(item.price) - costPerPortion) / Number(item.price));
+
+        // Base discount calculation (ranging from 10% up to ~22%)
+        const rawDiscount = Math.round(10 + excessRatio * 15 * marginRatio);
+        
+        // Enforce maximum discount ceiling of 25% (realistic restaurant discount cap) and margin floor
+        const maxDiscountAllowedByFloor = Math.floor(((Number(item.price) - marginFloorPrice) / Number(item.price)) * 100);
+        const MAX_DISCOUNT_CEILING = 25; // Never exceed 25% off on a dish
+        
+        suggestedDiscountPct = Math.min(MAX_DISCOUNT_CEILING, maxDiscountAllowedByFloor, Math.max(10, rawDiscount));
+        floorPrice = Math.max(marginFloorPrice, Number(item.price) * (1 - suggestedDiscountPct / 100));
       } else if (stock < predictedDemand) {
         understockRisk = true;
       }
+    }
+
+    // Detailed Log Output per Dish
+    console.log(`--------------------------------------------------`);
+    console.log(`DISH: "${item.name}" (ID: ${item.id})`);
+    console.log(`  Price: ₹${item.price} | Ingredient Cost: ₹${costPerPortion.toFixed(2)} | Stock: ${stock ?? 'Uncapped'}`);
+    console.log(`  Order History Rows: ${itemHistory.length} total | Dow (${targetDayName}) Rows: ${matchingDowRows.length} (Qty: ${matchingDowQty})`);
+    console.log(`  Baseline Demand (before weather): ${baselineDemand.toFixed(2)} portions`);
+    console.log(`  Weather Multiplier: ${weatherMultiplier.toFixed(2)} (${itemType} food in ${weatherCondText})`);
+    console.log(`  Value After Weather: ${adjustedValue.toFixed(2)} => Predicted Demand: ${predictedDemand} portions`);
+    console.log(`  Risk Assessment: Overstock = ${overstockRisk}, Understock = ${understockRisk}`);
+    if (overstockRisk) {
+      console.log(`  Suggested Smart Discount: ${suggestedDiscountPct}% Off | Floor Selling Price: ₹${floorPrice.toFixed(2)} (Margin Floor: ₹${marginFloorPrice.toFixed(2)})`);
     }
 
     forecasts.push({
@@ -238,10 +296,10 @@ export async function forecastDemand(
       understockRisk,
       suggestedDiscountPct,
       floorPrice: Math.round(floorPrice * 100) / 100,
-      costPerPortion: costs.cost_per_portion,
+      costPerPortion: Math.round(costPerPortion * 100) / 100,
     });
 
-    // 5. Cache the predicted demand in the forecast_cache table
+    // 5. Cache predicted demand in forecast_cache table
     try {
       await supabase.from("forecast_cache").upsert({
         restaurant_id: restaurantId,
@@ -254,5 +312,6 @@ export async function forecastDemand(
     }
   }
 
+  console.log(`=================== END FORECAST ENGINE ===================\n`);
   return forecasts;
 }

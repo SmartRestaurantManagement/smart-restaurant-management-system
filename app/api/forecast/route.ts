@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
 
     const existingOffersMap = new Map(existingOffers?.map(o => [o.menu_item_id, o]) || []);
 
-    // 3. For any item with overstock risk, generate a draft Smart Offer (active: false)
+    // 3. For any item with overstock risk, generate a draft Smart Offer (active: false) if not already active
     const draftOffersToInsert = [];
     const tomorrowEndOfDay = new Date();
     tomorrowEndOfDay.setDate(tomorrowEndOfDay.getDate() + 1);
@@ -62,12 +62,12 @@ export async function GET(request: NextRequest) {
     if (draftOffersToInsert.length > 0) {
       const { error: offersError } = await supabase
         .from("offers")
-        .insert(draftOffersToInsert);
+        .upsert(draftOffersToInsert, { onConflict: "restaurant_id,menu_item_id" });
 
       if (offersError) {
         console.error(`[API Forecast] Failed to insert draft smart offers: ${offersError.message}`);
       } else {
-        console.log(`[API Forecast] Successfully inserted ${draftOffersToInsert.length} draft offers.`);
+        console.log(`[API Forecast] Successfully upserted ${draftOffersToInsert.length} draft offers.`);
       }
     }
 
