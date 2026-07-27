@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/staff/empty-state";
 import type { Database } from "@/types/database";
+import { createClient } from "@/lib/supabase/client";
 
 type TableStatus = Database["public"]["Enums"]["table_status"];
 type TableRow = Database["public"]["Tables"]["tables"]["Row"];
@@ -32,6 +33,37 @@ export default function TablesPage() {
       await loadTables();
       setLoading(false);
     })();
+
+    // Subscribe to real-time table updates on the dashboard
+    const supabase = createClient();
+    const channel = supabase
+      .channel("tables-realtime-dashboard")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "tables" },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            setTables((prev) => {
+              const exists = prev.some((t) => t.id === (payload.new as TableRow).id);
+              if (exists) return prev;
+              return [...prev, payload.new as TableRow].sort((a, b) => a.table_number - b.table_number);
+            });
+          } else if (payload.eventType === "UPDATE") {
+            const updated = payload.new as TableRow;
+            setTables((prev) =>
+              prev.map((t) => (t.id === updated.id ? updated : t))
+            );
+          } else if (payload.eventType === "DELETE") {
+            const deleted = payload.old as { id: string };
+            setTables((prev) => prev.filter((t) => t.id !== deleted.id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   async function handleStatusChange(table: TableRow, status: TableStatus) {

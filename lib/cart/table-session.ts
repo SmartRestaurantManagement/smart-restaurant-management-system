@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 export function useTableSession() {
   const [tableNumber, setTableNumber] = useState<number | null>(null)
@@ -18,23 +18,23 @@ export function useTableSession() {
     setLoading(false)
   }, [])
 
-  const startSession = (num: number, tId: string, sId: string) => {
+  const startSession = useCallback((num: number, tId: string, sId: string) => {
     localStorage.setItem('kaizen_table_number', num.toString())
     localStorage.setItem('kaizen_table_id', tId)
     localStorage.setItem('kaizen_session_id', sId)
     setTableNumber(num)
     setTableId(tId)
     setSessionId(sId)
-  }
+  }, [])
 
-  const endSession = () => {
+  const endSession = useCallback(() => {
     localStorage.removeItem('kaizen_table_number')
     localStorage.removeItem('kaizen_table_id')
     localStorage.removeItem('kaizen_session_id')
     setTableNumber(null)
     setTableId(null)
     setSessionId(null)
-  }
+  }, [])
 
   return { tableNumber, tableId, sessionId, startSession, endSession, loading }
 }

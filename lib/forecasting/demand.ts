@@ -197,7 +197,7 @@ export async function forecastDemand(
       }
     }
 
-    const predictedDemand = Math.max(1, Math.round(baselineDemand * weatherMultiplier * 10) / 10);
+    const predictedDemand = Math.max(1, Math.round(baselineDemand * weatherMultiplier));
 
     // C. Calculate Overstock/Understock Risks and Smart Offers
     const stock = item.remaining_stock;

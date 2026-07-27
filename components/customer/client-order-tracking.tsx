@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -57,7 +57,7 @@ export function ClientOrderTracking({
   const [serviceLoading, setServiceLoading] = useState(false)
   const [serviceMessage, setServiceMessage] = useState('')
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   const total = initialItems.reduce((sum, item) => sum + item.price_at_order * item.qty, 0)
 

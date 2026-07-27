@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useCart } from '@/lib/cart/cart-context'
 import { useTableSession } from '@/lib/cart/table-session'
 import { createClient } from '@/lib/supabase/client'
@@ -16,8 +16,8 @@ interface UserProfile {
 }
 
 export function CustomerHeader() {
-  const { items } = useCart()
-  const { tableNumber, sessionId, endSession } = useTableSession()
+  const { items, clearCart } = useCart()
+  const { tableNumber, tableId, sessionId, endSession } = useTableSession()
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null)
   
   // Auth state
@@ -32,7 +32,7 @@ export function CustomerHeader() {
   const [verifyingStaff, setVerifyingStaff] = useState(false)
 
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   const itemCount = items.reduce((sum, i) => sum + i.qty, 0)
 
@@ -130,8 +130,24 @@ export function CustomerHeader() {
   }
 
   const handleLogout = async () => {
+    if (tableId) {
+      await supabase
+        .from('tables')
+        .update({ status: 'free' })
+        .eq('id', tableId)
+    }
+    clearCart()
+    endSession()
+    
+    // Completely clear all cached state starting with 'kaizen_'
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith('kaizen_')) {
+        localStorage.removeItem(key)
+      }
+    })
+
     await supabase.auth.signOut()
-    router.push('/menu')
+    router.push('/login')
     router.refresh()
   }
 
@@ -147,7 +163,7 @@ export function CustomerHeader() {
         {/* Navigation & Controls */}
         <div className="flex items-center gap-4">
           {/* Table Session Indicator */}
-          {tableNumber ? (
+          {tableNumber && user ? (
             <div className="hidden sm:flex items-center gap-2 bg-amber-50 text-amber-800 text-xs px-3 py-1.5 rounded-full border border-amber-200">
               <span className="font-semibold">Table {tableNumber}</span>
               {sessionId && (
@@ -156,7 +172,13 @@ export function CustomerHeader() {
                 </Link>
               )}
               <button 
-                onClick={() => {
+                onClick={async () => {
+                  if (tableId) {
+                    await supabase
+                      .from('tables')
+                      .update({ status: 'free' })
+                      .eq('id', tableId)
+                  }
                   endSession()
                   router.refresh()
                 }} 

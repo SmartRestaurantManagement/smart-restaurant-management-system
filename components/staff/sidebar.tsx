@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { LogOut, Coffee, ArrowLeftRight, ShoppingBag } from "lucide-react";
@@ -27,7 +27,7 @@ interface UserProfile {
 export function StaffSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -50,8 +50,14 @@ export function StaffSidebar() {
   }, [supabase]);
 
   const handleLogout = async () => {
+    // Completely clear all cached state starting with 'kaizen_'
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith('kaizen_')) {
+        localStorage.removeItem(key)
+      }
+    });
     await supabase.auth.signOut();
-    router.push("/menu");
+    router.push("/login");
     router.refresh();
   };
 

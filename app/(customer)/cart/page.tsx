@@ -31,6 +31,21 @@ export default function CartPage() {
   const [error, setError] = useState('')
   const [selectedAllergens, setSelectedAllergens] = useState<Allergen[]>([])
   
+  const [user, setUser] = useState<any>(null)
+  const [authLoading, setAuthLoading] = useState(true)
+
+  // Fetch user auth state
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user: currentUser } }) => {
+      setUser(currentUser)
+      setAuthLoading(false)
+    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+    })
+    return () => subscription.unsubscribe()
+  }, [supabase])
+  
   // Allergen safety check state
   const [allergenConflict, setAllergenConflict] = useState<{
     blocked: boolean;
@@ -213,6 +228,23 @@ export default function CartPage() {
     localStorage.setItem('kaizen_latest_order_id', order.id)
     clearCart()
     router.push(`/order/${order.id}`)
+  }
+
+  if (!authLoading && !user) {
+    return (
+      <div className="max-w-md mx-auto px-4 py-20 text-center space-y-4">
+        <div className="bg-neutral-100 p-4 rounded-full w-16 h-16 flex items-center justify-center mx-auto text-neutral-400">
+          <ShieldAlert className="h-8 w-8" />
+        </div>
+        <div className="space-y-1">
+          <h3 className="text-lg font-bold text-neutral-800">Login Required</h3>
+          <p className="text-sm text-neutral-500">Please log in to your account to review your cart and place order.</p>
+        </div>
+        <Button onClick={() => router.push('/login')} className="bg-neutral-900 text-white rounded-xl">
+          Log In
+        </Button>
+      </div>
+    )
   }
 
   if (items.length === 0) {

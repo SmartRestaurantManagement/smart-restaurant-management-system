@@ -1,6 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useCart } from '@/lib/cart/cart-context'
 import { useTableSession } from '@/lib/cart/table-session'
@@ -21,14 +23,43 @@ type Props = {
 }
 
 export function ClientMenu({ initialCategories }: Props) {
-  const { tableNumber, tableId, sessionId, startSession } = useTableSession()
+  const { tableNumber, tableId, sessionId, startSession, endSession } = useTableSession()
   const { addItem } = useCart()
   const [categories, setCategories] = useState(initialCategories)
   const [tables, setTables] = useState<TableRow[]>([])
   const [activeOffers, setActiveOffers] = useState<OfferRow[]>([])
   const [selectedTable, setSelectedTable] = useState<string>('')
   const [tableModalOpen, setTableModalOpen] = useState(false)
-  const supabase = createClient()
+  
+  const [user, setUser] = useState<any>(null)
+  const [authLoading, setAuthLoading] = useState(true)
+  
+  const supabase = useMemo(() => createClient(), [])
+  const router = useRouter()
+
+  // Fetch user auth state and clear table session if logged out
+  useEffect(() => {
+    async function checkUser() {
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      setUser(currentUser)
+      if (!currentUser) {
+        endSession()
+      }
+      setAuthLoading(false)
+    }
+    checkUser()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+      if (!session?.user) {
+        endSession()
+      }
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [supabase, endSession])
 
   // Load tables for the dine-in selector
   useEffect(() => {
@@ -52,7 +83,7 @@ export function ClientMenu({ initialCategories }: Props) {
     loadOffers()
   }, [supabase, categories])
 
-  // Subscribe to real-time menu_items and offers changes
+  // Subscribe to real-time menu_items, offers, and tables changes
   useEffect(() => {
     const menuChannel = supabase
       .channel('menu-realtime')
@@ -86,6 +117,27 @@ export function ClientMenu({ initialCategories }: Props) {
             })
         }
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tables' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setTables((prev) => {
+              const exists = prev.some((t) => t.id === (payload.new as TableRow).id)
+              if (exists) return prev
+              return [...prev, payload.new as TableRow].sort((a, b) => a.table_number - b.table_number)
+            })
+          } else if (payload.eventType === 'UPDATE') {
+            const updated = payload.new as TableRow
+            setTables((prev) =>
+              prev.map((t) => (t.id === updated.id ? updated : t))
+            )
+          } else if (payload.eventType === 'DELETE') {
+            const deleted = payload.old as { id: string }
+            setTables((prev) => prev.filter((t) => t.id !== deleted.id))
+          }
+        }
+      )
       .subscribe()
 
     return () => {
@@ -97,6 +149,24 @@ export function ClientMenu({ initialCategories }: Props) {
   const handleSelectTable = async (tId: string) => {
     const table = tables.find((t) => t.id === tId)
     if (!table) return
+
+    try {
+      // If already seated at a different table, free the old table
+      if (tableId && tableId !== tId) {
+        await supabase
+          .from('tables')
+          .update({ status: 'free' })
+          .eq('id', tableId)
+      }
+
+      // Mark the selected table as occupied
+      await supabase
+        .from('tables')
+        .update({ status: 'occupied' })
+        .eq('id', tId)
+    } catch (err) {
+      console.error('Failed to update table status:', err)
+    }
 
     // 1. Check if there's already an active order for this table to join
     const { data: activeOrders } = await supabase
@@ -134,7 +204,24 @@ export function ClientMenu({ initialCategories }: Props) {
   return (
     <main className="max-w-5xl mx-auto px-4 py-8 space-y-8">
       {/* Table Session Prompt / Indicator */}
-      {!tableNumber ? (
+      {!user ? (
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-fade-in">
+          <div className="space-y-1">
+            <h3 className="font-semibold text-amber-900 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-amber-600 animate-pulse" />
+              Dining with us?
+            </h3>
+            <p className="text-sm text-amber-800/80">
+              Please log in to your account to select a table, claim offers, and place orders.
+            </p>
+          </div>
+          <Link href="/login">
+            <Button className="bg-amber-600 hover:bg-amber-700 text-white font-medium shadow-sm">
+              Log In to Order
+            </Button>
+          </Link>
+        </div>
+      ) : !tableNumber ? (
         <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-fade-in">
           <div className="space-y-1">
             <h3 className="font-semibold text-amber-900 flex items-center gap-2">
@@ -215,14 +302,20 @@ export function ClientMenu({ initialCategories }: Props) {
               <p className="font-bold text-lg">₹{Math.round(Number(featuredItem.price) * (1 - Number(featuredOffer.discount_pct) / 100))}</p>
             </div>
             <Button
-              onClick={() => addItem({
-                menuItemId: featuredItem.id,
-                name: featuredItem.name,
-                price: Number(featuredItem.price) * (1 - Number(featuredOffer.discount_pct) / 100)
-              })}
+              onClick={() => {
+                if (!user) {
+                  router.push('/login')
+                  return
+                }
+                addItem({
+                  menuItemId: featuredItem.id,
+                  name: featuredItem.name,
+                  price: Number(featuredItem.price) * (1 - Number(featuredOffer.discount_pct) / 100)
+                })
+              }}
               className="bg-white text-orange-600 hover:bg-orange-50 font-bold shadow-md rounded-xl px-4 py-2"
             >
-              Claim Offer
+              {user ? 'Claim Offer' : 'Login to Claim'}
             </Button>
           </div>
         </div>
@@ -270,16 +363,16 @@ export function ClientMenu({ initialCategories }: Props) {
                       <div className="flex items-center gap-2 mt-1">
                         {isSoldOut ? (
                           <Badge variant="destructive" className="rounded-md font-semibold text-xxs px-2 py-0.5">
-                            Sold Out
+                            Not Available
                           </Badge>
-                        ) : item.remaining_stock !== null ? (
+                        ) : (
                           <Badge 
-                            variant={item.remaining_stock <= 3 ? "destructive" : "secondary"} 
-                            className="rounded-md font-semibold text-xxs px-2 py-0.5"
+                            variant="secondary" 
+                            className="rounded-md font-semibold text-xxs px-2 py-0.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-50 border border-emerald-200/60 font-medium"
                           >
-                            Only {item.remaining_stock} left
+                            Available
                           </Badge>
-                        ) : null}
+                        )}
                       </div>
                     </CardHeader>
                     <CardContent className="p-5 pt-0 space-y-4">
