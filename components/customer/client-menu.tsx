@@ -213,12 +213,12 @@ export function ClientMenu({ initialCategories }: Props) {
               Dining with us?
             </h3>
             <p className="text-sm text-amber-800/80">
-              Please log in to your account to select a table, claim offers, and place orders.
+              Please sign up with your email to select a table, claim offers, and place orders.
             </p>
           </div>
-          <Link href="/login">
+          <Link href="/signup">
             <Button className="bg-amber-600 hover:bg-amber-700 text-white font-medium shadow-sm">
-              Log In to Order
+              Sign Up to Order
             </Button>
           </Link>
         </div>
@@ -305,7 +305,7 @@ export function ClientMenu({ initialCategories }: Props) {
             <Button
               onClick={() => {
                 if (!user) {
-                  router.push('/login')
+                  router.push('/signup')
                   return
                 }
                 addItem({

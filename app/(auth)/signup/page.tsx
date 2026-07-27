@@ -2,13 +2,11 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { getAuthErrorMessage } from '@/lib/auth/get-auth-error-message'
 
 export default function SignupPage() {
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
@@ -19,7 +17,10 @@ export default function SignupPage() {
     setLoading(true)
     setError('')
 
-    const { error } = await supabase.auth.signUp({ email, password })
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: true },
+    })
 
     setLoading(false)
 
@@ -34,7 +35,10 @@ export default function SignupPage() {
   return (
     <div className="max-w-sm mx-auto mt-20 space-y-6">
       <form onSubmit={handleSignup} className="space-y-4">
-        <h1 className="text-2xl font-bold">Create account</h1>
+        <h1 className="text-2xl font-bold">Sign up</h1>
+        <p className="text-sm text-neutral-500">
+          Enter your email and we&apos;ll send you a one-time code to sign in - no password needed.
+        </p>
         <input
           type="email"
           placeholder="Email"
@@ -43,26 +47,11 @@ export default function SignupPage() {
           required
           className="w-full border rounded px-3 py-2"
         />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          minLength={6}
-          className="w-full border rounded px-3 py-2"
-        />
         {error && <p className="text-red-500 text-sm">{error}</p>}
         <button disabled={loading} className="w-full bg-black text-white rounded px-3 py-2 font-semibold">
-          {loading ? 'Signing up...' : 'Sign up'}
+          {loading ? 'Sending code...' : 'Continue'}
         </button>
       </form>
-      <p className="text-sm text-neutral-500 text-center">
-        Already have an account?{' '}
-        <Link href="/login" className="text-black font-semibold underline">
-          Log in
-        </Link>
-      </p>
     </div>
   )
 }

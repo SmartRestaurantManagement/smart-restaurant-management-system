@@ -254,11 +254,11 @@ export default function CartPage() {
           <ShieldAlert className="h-8 w-8" />
         </div>
         <div className="space-y-1">
-          <h3 className="text-lg font-bold text-neutral-800">Login Required</h3>
-          <p className="text-sm text-neutral-500">Please log in to your account to review your cart and place order.</p>
+          <h3 className="text-lg font-bold text-neutral-800">Sign Up Required</h3>
+          <p className="text-sm text-neutral-500">Please sign up with your email to review your cart and place order.</p>
         </div>
-        <Button onClick={() => router.push('/login')} className="bg-neutral-900 text-white rounded-xl">
-          Log In
+        <Button onClick={() => router.push('/signup')} className="bg-neutral-900 text-white rounded-xl">
+          Sign Up
         </Button>
       </div>
     )

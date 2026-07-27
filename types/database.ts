@@ -633,6 +633,35 @@ export type Database = {
           },
         ]
       }
+      restaurant_settings: {
+        Row: {
+          created_at: string
+          dashboard_pin_hash: string | null
+          restaurant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          dashboard_pin_hash?: string | null
+          restaurant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          dashboard_pin_hash?: string | null
+          restaurant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_settings_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: true
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       restaurants: {
         Row: {
           created_at: string
@@ -806,12 +835,39 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      get_top_pairing: {
+        Args: { p_item_id: string }
+        Returns: {
+          pair_count: number
+          paired_item_id: string
+          paired_name: string
+        }[]
+      }
       is_admin: { Args: never; Returns: boolean }
       is_staff_or_admin: { Args: never; Returns: boolean }
+      occupy_table: {
+        Args: { p_table_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          restaurant_id: string
+          status: Database["public"]["Enums"]["table_status"]
+          table_number: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tables"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       recalc_menu_item_stock: {
         Args: { p_menu_item_id: string }
         Returns: undefined
       }
+      set_dashboard_pin: { Args: { p_pin: string }; Returns: undefined }
+      verify_dashboard_pin: { Args: { p_pin: string }; Returns: boolean }
     }
     Enums: {
       bill_split_method: "none" | "equal" | "by_item" | "custom"

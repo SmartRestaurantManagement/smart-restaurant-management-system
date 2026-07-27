@@ -5,8 +5,13 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Allow public authentication paths and static/API paths
-  const publicPaths = ['/login', '/signup', '/verify-otp', '/auth/confirm']
+  const publicPaths = ['/signup', '/verify-otp', '/auth/confirm']
   const isPublicPath = publicPaths.some(path => pathname.startsWith(path))
+
+  // /dashboard is gated by its own shared PIN (app/(staff)/dashboard/layout.tsx),
+  // not Supabase Auth - staff never log in at all, so this middleware must not
+  // require a Supabase session to reach it.
+  const isPinGatedPath = pathname.startsWith('/dashboard')
 
   let supabaseResponse = NextResponse.next({
     request,
@@ -37,16 +42,16 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // 1. If not logged in and trying to access a protected page, redirect to /login
-  if (!user && !isPublicPath) {
+  // 1. If not logged in and trying to access a protected page, redirect to /signup
+  if (!user && !isPublicPath && !isPinGatedPath) {
     const url = request.nextUrl.clone()
-    url.pathname = '/login'
+    url.pathname = '/signup'
     return NextResponse.redirect(url)
   }
 
   // 2. If logged in:
   if (user) {
-    // If they are on a public path (like /login or /signup) or at the root "/", redirect them to their home page
+    // If they are on a public path (like /signup) or at the root "/", redirect them to their home page
     if (isPublicPath || pathname === '/') {
       const { data: profile } = await supabase
         .from('profiles')
