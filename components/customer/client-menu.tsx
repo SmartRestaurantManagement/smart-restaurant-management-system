@@ -11,7 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { AddToCartButton } from '@/components/customer/add-to-cart-button'
-import { Sparkles, MapPin, AlertCircle, RefreshCw, Layers } from 'lucide-react'
+import { PlatterCraft } from '@/components/customer/platter-craft'
+import { Sparkles, MapPin, AlertCircle, RefreshCw, Compass, Search, Utensils, MessageSquare, Flame, Check } from 'lucide-react'
 import type { Database } from '@/types/database'
 import type { CategoryWithItems } from '@/lib/menu/get-menu'
 
@@ -22,6 +23,44 @@ type OfferRow = Database['public']['Tables']['offers']['Row']
 type Props = {
   initialCategories: CategoryWithItems[]
 }
+
+// Unsplash high-resolution food image mapping
+const MENU_ITEM_IMAGES: Record<string, string> = {
+  'Veg Spring Rolls': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTt9ORmklQl-wh0tmdI6XVQXbtA2ue4btYEa_E3s9whCg&s=10',
+  'Chicken 65': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSCLCMBqpPbGixWKafeh4aLsKpnUUGImPgc4YpeLwtTog&s=10',
+  'Hara Bhara Kebab': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSsBjLq7sL3t7_Z12idGo__NEa1zqgT3k_8e7vILFwHCA&s=10',
+  'Chilli Paneer': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQF35xzcNnYZIE7ELQ1vic2vZmC-B2iC4IR47bf14hgLA&s=10',
+  'Tandoori Chicken Wings': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSlTVM2KVbvhmJ7rkiiA7jzJ88cURDHa2-D1-geHmiJsA&s=10',
+  'Dal Makhani': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRHZxn29aO0wzymxTAkUK71oFRJkLKQrMPGRM21enWDz5o_qumBA--y6AgF&s=10',
+  'Chana Masala': 'https://upbeetanisha.com/wp-content/uploads/2021/04/DSC_4106.jpg',
+  'Butter Chicken': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS2nuZYPAkTOOAV8ohyrZiRGS2V8h2DNZphYWSElrmBKQ&s=10',
+  'Chicken Curry': 'https://www.whiskaffair.com/wp-content/uploads/2021/06/Desi-Chicken-Curry-2-3-500x500.jpg',
+  'Palak Paneer': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRkhcmAe6uPBhw6VFe8_-o2O0v36aZ7Lmi4w6HBRu1W6LkR5TRCTvWYRmc&s=10',
+  'Mutton Rogan Josh': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQLT8egGdRcHP-OcGa9vPAr91EVFu3Srj9sSFb9WexrRw&s=10',
+  'Vegetable Biryani': 'https://sandhyahariharan.co.uk/wp-content/uploads/2015/12/vegetable-biryani-1-of-3.jpg',
+  'Garlic Naan': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQgTFFSlntD3Io1a-5nc751z_-JjIQ83U_uKMghQGlmjg&s=10',
+  'Tandoori Roti': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSQPF27U23et4Y8ciimeadUscCZv4naZoDuKgNFCcb7jQ&s=10',
+  'Missi Roti': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTh431mBOVQp3_295BSl5niI601H4Ldlo847fLlPQypkQ&s=10',
+  'Kulcha': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR32LyKLL4Oq1gGxttWYJmgbYbfFLNTI-DZMQda_eSG1Q&s=10',
+  'Mango Lassi': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcToLkdnH6SrrupKDAwmPhnE11FT77ZYUOkvNIY7_xy6Dw&s=10',
+  'Cold Coffee': 'https://frostingandfettuccine.com/wp-content/uploads/2022/12/Caramel-Iced-Coffee-6.jpg',
+  'Fresh Lime Soda': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTS76bcLeBBi9BIjEPh1tIpOQnLDutvIfmz3Du_WEnq8Q&s=10',
+  'Filter Coffee': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ_c5Yr-LRGqcwRxBCFdbWF0DzbPW-rSAikv7ieVCUV-A&s=10',
+  'Gulab Jamun': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTnlJfTLnQCTShE2Gbq3xUuvIQINU0QIMXWNzOa5l62Ow&s=10',
+  'Rasmalai': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRd4xpFfwabDNCsZgUBIU-X18OVg32fOsqfmCf-06fkWA&s=10',
+  'Vanilla Ice Cream': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR2UfxUx8XVzR8jrWaiemqLu6Jv-x1KkM0WuUotTezUbw&s=10',
+  'Kulfi': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSmolP6gdoC2es4xPWxhk2PVyboFqlXRFJPlJbuOoInWQ&s=10',
+  'Chocolate Brownie': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQiyq-DtSzF8cNFsiXUBTAeeOQUI6o1H28il768qzvAog&s=10',
+  
+  // Custom user additions
+  'Paneer Tikka': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRvfcDBtM9Er6x178d1uWQs_eyuNEBPCQd2V_rHcjufoEHe-00-rcShpGA&s=10',
+  'Butter Naan': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSk1XSSHiILCkinShRHGf1gbVJy10a0n6jWpgDnoyCXwg&s=10',
+  'Paneer Butter Masala': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQwRO9423culvRaDaBBr4Rf0SOpclL3L0s94fC8C-_X5g&s=10',
+  'Pulao': 'https://c.ndtvimg.com/2023-01/bcdjpkg_pulao_625x300_31_January_23.jpg',
+  'Masala Chai': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRtWJiUPsW15LBE3sP0M1TCL0U7KmvynXyvwXZ1B7tz3g&s=10',
+}
+
+const FALLBACK_FOOD_IMAGE = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80'
 
 export function ClientMenu({ initialCategories }: Props) {
   const { tableNumber, tableId, sessionId, startSession, endSession } = useTableSession()
@@ -34,6 +73,12 @@ export function ClientMenu({ initialCategories }: Props) {
   
   const [user, setUser] = useState<any>(null)
   const [authLoading, setAuthLoading] = useState(true)
+
+  // Custom Tabs State: 'menu' | 'craft' | 'reviews'
+  const [activeTab, setActiveTab] = useState<'menu' | 'craft' | 'reviews'>('menu')
+  // Search & Category Filters state
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState<string>('All')
   
   const supabase = useMemo(() => createClient(), [])
   const router = useRouter()
@@ -107,7 +152,6 @@ export function ClientMenu({ initialCategories }: Props) {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'offers' },
         (payload) => {
-          // Reload offers on any change
           supabase
             .from('offers')
             .select('*')
@@ -152,7 +196,6 @@ export function ClientMenu({ initialCategories }: Props) {
     if (!table) return
 
     try {
-      // If already seated at a different table, free the old table
       if (tableId && tableId !== tId) {
         await supabase
           .from('tables')
@@ -160,7 +203,6 @@ export function ClientMenu({ initialCategories }: Props) {
           .eq('id', tableId)
       }
 
-      // Mark the selected table as occupied
       await supabase
         .from('tables')
         .update({ status: 'occupied' })
@@ -169,7 +211,6 @@ export function ClientMenu({ initialCategories }: Props) {
       console.error('Failed to update table status:', err)
     }
 
-    // 1. Check if there's already an active order for this table to join
     const { data: activeOrders } = await supabase
       .from('orders')
       .select('id, session_id')
@@ -181,7 +222,6 @@ export function ClientMenu({ initialCategories }: Props) {
     let finalSessionId = crypto.randomUUID()
     if (activeOrders && activeOrders.length > 0) {
       finalSessionId = activeOrders[0].session_id
-      // Store the order ID so we track it
       localStorage.setItem('kaizen_latest_order_id', activeOrders[0].id)
     }
 
@@ -202,234 +242,643 @@ export function ClientMenu({ initialCategories }: Props) {
         .find((item) => item.id === featuredOffer.menu_item_id)
     : null
 
+  // Computed filtered list of categories and items
+  const filteredCategories = useMemo(() => {
+    return categories.map((cat) => {
+      // Filter items in this category
+      const matchedItems = cat.menu_items.filter((item) => {
+        const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                              (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()))
+        return matchesSearch
+      })
+
+      return {
+        ...cat,
+        menu_items: matchedItems
+      }
+    }).filter((cat) => {
+      // Keep category if it matches the selectedCategory filter AND has items
+      const matchesCategoryPill = selectedCategory === 'All' || cat.name === selectedCategory
+      return matchesCategoryPill && cat.menu_items.length > 0
+    })
+  }, [categories, searchQuery, selectedCategory])
+
   return (
-    <main className="max-w-5xl mx-auto px-4 py-8 space-y-8">
-      {/* Table Session Prompt / Indicator */}
-      {!user ? (
-        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-fade-in">
-          <div className="space-y-1">
-            <h3 className="font-semibold text-amber-900 flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-amber-600 animate-pulse" />
-              Dining with us?
-            </h3>
-            <p className="text-sm text-amber-800/80">
-              Please sign up with your email to select a table, claim offers, and place orders.
-            </p>
-          </div>
-          <Link href="/signup">
-            <Button className="bg-amber-600 hover:bg-amber-700 text-white font-medium shadow-sm">
-              Sign Up to Order
-            </Button>
-          </Link>
-        </div>
-      ) : !tableNumber ? (
-        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-fade-in">
-          <div className="space-y-1">
-            <h3 className="font-semibold text-amber-900 flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-amber-600 animate-bounce" />
-              Dining in? Select your Table
-            </h3>
-            <p className="text-sm text-amber-800/80">
-              Select your table number to enable group ordering and split the bill with friends.
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <select
-              value={selectedTable}
-              onChange={(e) => setSelectedTable(e.target.value)}
-              className="bg-white border border-amber-200 rounded-lg px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium"
-            >
-              <option value="">Choose Table...</option>
-              {tables.map((t) => (
-                <option key={t.id} value={t.id}>
-                  Table {t.table_number} ({t.status})
-                </option>
+    <main className="max-w-5xl mx-auto px-4 py-8 space-y-10 text-charcoal-foreground">
+      
+      {/* Tab Switcher - Custom Kaizen Brand Menu */}
+      <div className="flex justify-center border-b border-neutral-900 pb-px">
+        <nav className="flex gap-2 sm:gap-6" aria-label="Tabs">
+          <button
+            onClick={() => setActiveTab('menu')}
+            className={`py-4 px-4 text-sm font-extrabold tracking-widest uppercase transition-all duration-300 relative cursor-pointer ${
+              activeTab === 'menu'
+                ? 'text-terracotta font-black border-b-2 border-terracotta'
+                : 'text-neutral-400 hover:text-neutral-200'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <Utensils className="h-4 w-4" />
+              Digital Menu
+            </span>
+          </button>
+          
+          <button
+            onClick={() => setActiveTab('craft')}
+            className={`py-4 px-4 text-sm font-extrabold tracking-widest uppercase transition-all duration-300 relative cursor-pointer ${
+              activeTab === 'craft'
+                ? 'text-moss font-black border-b-2 border-moss'
+                : 'text-neutral-400 hover:text-neutral-200'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <Compass className="h-4 w-4 text-moss animate-pulse" />
+              Spice Platter
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('reviews')}
+            className={`py-4 px-4 text-sm font-extrabold tracking-widest uppercase transition-all duration-300 relative cursor-pointer ${
+              activeTab === 'reviews'
+                ? 'text-terracotta font-black border-b-2 border-terracotta'
+                : 'text-neutral-400 hover:text-neutral-200'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Guest Reviews
+            </span>
+          </button>
+        </nav>
+      </div>
+
+      {/* RENDER TAB 1: DIGITAL MENU */}
+      {activeTab === 'menu' && (
+        <div className="space-y-8 animate-in fade-in duration-300">
+          
+          {/* Table Session Prompt / Indicator */}
+          {!user ? (
+            <div className="bg-gradient-to-r from-neutral-900/90 to-charcoal/95 border border-amber-900/30 rounded-3xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl backdrop-blur-md relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
+              <div className="space-y-1 relative z-10">
+                <h3 className="font-bold text-amber-400 flex items-center gap-2 text-base">
+                  <AlertCircle className="h-4 w-4 text-amber-500 animate-pulse" />
+                  Dining with us?
+                </h3>
+                <p className="text-xs text-neutral-400 leading-relaxed max-w-xl">
+                  Please sign up with your email to select a table, claim exclusive smart offers, and send tickets directly to the kitchen.
+                </p>
+              </div>
+              <Link href="/signup" className="relative z-10 shrink-0">
+                <Button className="bg-amber-600 hover:bg-amber-500 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg shadow-amber-900/30 transition-all cursor-pointer">
+                  Sign Up to Order
+                </Button>
+              </Link>
+            </div>
+          ) : !tableNumber ? (
+            <div className="bg-gradient-to-r from-neutral-900/90 to-charcoal/95 border border-amber-900/30 rounded-3xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl backdrop-blur-md relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
+              <div className="space-y-1 relative z-10">
+                <h3 className="font-bold text-amber-400 flex items-center gap-2 text-base">
+                  <MapPin className="h-4 w-4 text-amber-500 animate-bounce" />
+                  Seated at a Table?
+                </h3>
+                <p className="text-xs text-neutral-400 leading-relaxed max-w-xl">
+                  Select your table number below to enable group ordering sessions, allowing you to split the bill with friends live.
+                </p>
+              </div>
+              <div className="flex gap-2 relative z-10 shrink-0">
+                <select
+                  value={selectedTable}
+                  onChange={(e) => setSelectedTable(e.target.value)}
+                  className="bg-black/60 border border-neutral-800 rounded-xl px-4 py-2 text-xs text-amber-200 focus:outline-none focus:ring-1 focus:ring-amber-500 font-bold"
+                >
+                  <option value="" className="bg-charcoal text-neutral-400">Choose Table...</option>
+                  {tables.map((t) => (
+                    <option key={t.id} value={t.id} className="bg-charcoal text-white">
+                      Table {t.table_number} ({t.status})
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  size="sm"
+                  disabled={!selectedTable}
+                  onClick={() => handleSelectTable(selectedTable)}
+                  className="bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl px-5 py-2.5 transition-all shadow-md shadow-amber-900/20 cursor-pointer"
+                >
+                  Join Session
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center justify-between bg-neutral-900/80 rounded-2xl px-6 py-3.5 border border-neutral-800 text-xs shadow-md">
+              <div className="flex items-center gap-2 text-neutral-300 font-semibold">
+                <MapPin className="h-4 w-4 text-amber-500 animate-pulse" />
+                <span>Seated at <strong className="text-amber-400 font-extrabold">Table {tableNumber}</strong></span>
+              </div>
+              <div className="flex gap-4 items-center">
+                {sessionId && (
+                  <span className="text-[10px] text-neutral-500 hidden sm:inline font-mono">
+                    SESSION_ID: {sessionId.slice(0, 8).toUpperCase()}
+                  </span>
+                )}
+                <button
+                  onClick={() => setTableModalOpen(true)}
+                  className="text-amber-500 hover:text-amber-400 font-bold underline text-xs cursor-pointer"
+                >
+                  Switch Table
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Floating Smart Offer Notification */}
+          {featuredItem && featuredOffer && (
+            <div className="bg-gradient-to-r from-red-950/80 via-amber-950/40 to-charcoal border border-red-900/40 text-white rounded-3xl p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 rounded-full blur-2xl pointer-events-none" />
+              <div className="flex items-center gap-4 relative z-10">
+                <div className="bg-amber-500/10 p-3 rounded-2xl border border-amber-500/20">
+                  <Sparkles className="h-6 w-6 text-amber-400 animate-pulse" />
+                </div>
+                <div>
+                  <span className="text-[10px] bg-red-900/50 text-red-300 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-widest border border-red-500/20">
+                    Flash Smart Offer
+                  </span>
+                  <h4 className="font-extrabold text-lg mt-1.5 text-white">
+                    Save {Math.round(Number(featuredOffer.discount_pct))}% on {featuredItem.name}!
+                  </h4>
+                  <p className="text-xs text-neutral-400 mt-0.5 leading-relaxed max-w-md">
+                    Live dynamic pricing adjustment to help kitchen operations balance ingredient inventory.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 shrink-0 relative z-10 w-full md:w-auto justify-between md:justify-end border-t border-neutral-800/80 md:border-t-0 pt-3 md:pt-0">
+                <div className="text-right">
+                  <span className="line-through text-xs text-neutral-500">₹{featuredItem.price}</span>
+                  <p className="font-extrabold text-xl text-amber-400">₹{Math.round(Number(featuredItem.price) * (1 - Number(featuredOffer.discount_pct) / 100))}</p>
+                </div>
+                <Button
+                  onClick={() => {
+                    if (!user) {
+                      router.push('/signup')
+                      return
+                    }
+                    addItem({
+                      menuItemId: featuredItem.id,
+                      name: featuredItem.name,
+                      price: Number(featuredItem.price) * (1 - Number(featuredOffer.discount_pct) / 100)
+                    })
+                  }}
+                  className="bg-terracotta hover:bg-terracotta/90 text-white font-extrabold shadow-lg rounded-xl px-5 py-3 text-xs cursor-pointer transition-all active:scale-98 border border-terracotta/20"
+                >
+                  {user ? 'Claim Offer' : 'Login to Claim'}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Filtering & Search Bar Panel */}
+          <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-black/25 p-4 rounded-2xl border border-neutral-900">
+            {/* Category selection pills */}
+            <div className="flex flex-wrap gap-2 w-full md:w-auto">
+              {['All', ...categories.map(c => c.name)].map((catName) => (
+                <button
+                  key={catName}
+                  onClick={() => setSelectedCategory(catName)}
+                  className={`px-4 py-2 rounded-xl text-xs font-extrabold tracking-wider uppercase transition-all duration-200 cursor-pointer ${
+                    selectedCategory === catName
+                      ? 'bg-terracotta text-white shadow-lg shadow-terracotta/20 border border-terracotta/20'
+                      : 'bg-neutral-900 text-neutral-400 hover:bg-neutral-850 border border-neutral-800/60'
+                  }`}
+                >
+                  {catName}
+                </button>
               ))}
-            </select>
-            <Button
-              size="sm"
-              disabled={!selectedTable}
-              onClick={() => handleSelectTable(selectedTable)}
-              className="bg-amber-600 hover:bg-amber-700 text-white font-medium shadow-sm"
-            >
-              Join Table
-            </Button>
+            </div>
+
+            {/* Search Box */}
+            <div className="relative w-full md:w-72">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500" />
+              <input
+                type="text"
+                placeholder="Search food items..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-black/40 border border-neutral-800 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-terracotta"
+              />
+            </div>
           </div>
-        </div>
-      ) : (
-        <div className="flex flex-wrap items-center justify-between bg-neutral-100/80 rounded-2xl px-6 py-3 border border-neutral-200 text-sm">
-          <div className="flex items-center gap-2 text-neutral-700 font-medium">
-            <MapPin className="h-4 w-4 text-amber-600" />
-            <span>Seated at <strong className="text-amber-800 font-semibold">Table {tableNumber}</strong></span>
-          </div>
-          <div className="flex gap-4 items-center">
-            {sessionId && (
-              <span className="text-xs text-neutral-500 hidden sm:inline">
-                Session ID: {sessionId.slice(0, 8)}...
-              </span>
+
+          {/* Menu Catalog Listing */}
+          <div className="space-y-12">
+            {filteredCategories.length === 0 ? (
+              <div className="text-center py-16 bg-neutral-900/20 border border-dashed border-neutral-800 rounded-3xl max-w-lg mx-auto">
+                <AlertCircle className="h-8 w-8 text-neutral-600 mx-auto mb-3" />
+                <p className="text-sm font-semibold text-neutral-400">No dishes match your query</p>
+                <button 
+                  onClick={() => { setSearchQuery(''); setSelectedCategory('All') }}
+                  className="text-xs text-terracotta hover:underline mt-2 font-bold cursor-pointer"
+                >
+                  Clear all filters
+                </button>
+              </div>
+            ) : (
+              filteredCategories.map((category) => (
+                <section key={category.id} className="space-y-6 animate-in fade-in duration-300">
+                  <div className="flex items-center gap-3 border-b border-neutral-800/60 pb-3">
+                    <h2 className="text-xl font-extrabold tracking-wide text-neutral-100 uppercase">{category.name}</h2>
+                    <Badge variant="secondary" className="rounded-lg font-bold text-[10px] bg-neutral-900 border border-neutral-800 text-neutral-400">
+                      {category.menu_items.length} items
+                    </Badge>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {category.menu_items.map((item) => {
+                      const isSoldOut =
+                        item.is_available === false ||
+                        (item.remaining_stock !== null && item.remaining_stock <= 0)
+
+                      const offer = getItemOffer(item.id)
+                      const finalPrice = offer
+                        ? Number(item.price) * (1 - Number(offer.discount_pct) / 100)
+                        : Number(item.price)
+
+                      // Fetch beautiful photo
+                      const imageUrl = MENU_ITEM_IMAGES[item.name] || FALLBACK_FOOD_IMAGE
+
+                      return (
+                        <Card 
+                          key={item.id} 
+                          className={`relative overflow-hidden transition-all duration-500 border border-neutral-800/60 flex flex-col group shadow-xl ${
+                            isSoldOut 
+                              ? 'opacity-40 select-none bg-neutral-900/20' 
+                              : 'bg-gradient-to-b from-neutral-950 to-charcoal/80 hover:border-terracotta/40 hover:-translate-y-1'
+                          }`}
+                        >
+                          {/* Image Box */}
+                          <div className="h-44 w-full overflow-hidden relative bg-neutral-900">
+                            {/* Offer tag */}
+                            {offer && !isSoldOut && (
+                              <div className="absolute top-2 right-2 bg-gradient-to-l from-red-600 to-orange-500 text-white text-[9px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1 shadow-md z-10 border border-red-500/20">
+                                <Sparkles className="h-3 w-3 text-white animate-pulse" />
+                                <span>{Math.round(Number(offer.discount_pct))}% OFF</span>
+                              </div>
+                            )}
+
+                            {/* Main photo with zoom effect */}
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={imageUrl}
+                              alt={item.name}
+                              className="w-full h-full object-cover transition-all duration-700 ease-out group-hover:scale-105"
+                            />
+                            
+                            {/* Ambient shadow gradient */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-transparent to-black/10" />
+                          </div>
+
+                          <CardHeader className="p-4 pb-2">
+                            <div className="flex justify-between items-start gap-2">
+                              <CardTitle className="text-base font-extrabold text-neutral-100 pr-10 line-clamp-1 group-hover:text-terracotta transition-colors">
+                                {item.name}
+                              </CardTitle>
+                            </div>
+                            
+                            <div className="flex items-center gap-2 mt-1">
+                              {isSoldOut ? (
+                                <Badge variant="destructive" className="rounded-md font-bold text-[9px] px-2 py-0.5 bg-red-950 text-red-400 border border-red-800/30">
+                                  Not Available
+                                </Badge>
+                              ) : (
+                                <Badge 
+                                  variant="secondary" 
+                                  className="rounded-md font-bold text-[9px] px-2 py-0.5 bg-emerald-950 text-emerald-400 border border-emerald-800/30 font-medium"
+                                >
+                                  Available
+                                </Badge>
+                              )}
+
+                              {item.remaining_stock !== null && item.remaining_stock > 0 && item.remaining_stock <= 10 && (
+                                <span className="text-[10px] text-terracotta/90 font-bold animate-pulse">
+                                  Only {item.remaining_stock} left!
+                                </span>
+                              )}
+                            </div>
+                          </CardHeader>
+                          
+                          <CardContent className="p-4 pt-0 space-y-4 flex-1 flex flex-col justify-between">
+                            {item.description && (
+                              <p className="text-xs text-neutral-400 line-clamp-2 h-8 leading-relaxed">
+                                {item.description}
+                              </p>
+                            )}
+                            
+                            <div className="flex items-baseline justify-between pt-2 border-t border-neutral-900/50">
+                              <div className="flex items-baseline gap-2">
+                                <span className="text-lg font-extrabold text-white">
+                                  ₹{finalPrice}
+                                </span>
+                                {offer && (
+                                  <span className="text-xs text-neutral-500 line-through">
+                                    ₹{item.price}
+                                  </span>
+                                )}
+                              </div>
+                              <AddToCartButton
+                                menuItemId={item.id}
+                                name={item.name}
+                                price={finalPrice}
+                                disabled={isSoldOut}
+                              />
+                            </div>
+                            {items.some(i => i.menuItemId === item.id) && (
+                              <div className="pt-2 border-t border-neutral-900/40">
+                                <MenuItemPairing menuItemId={item.id} />
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      )
+                    })}
+                  </div>
+                </section>
+              ))
             )}
-            <button
-              onClick={() => setTableModalOpen(true)}
-              className="text-amber-700 hover:text-amber-800 font-medium underline text-xs"
-            >
-              Change Table
-            </button>
           </div>
         </div>
       )}
 
-      {/* Floating Smart Offer Notification */}
-      {featuredItem && featuredOffer && (
-        <div className="bg-gradient-to-r from-red-600 to-orange-500 text-white rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-md animate-pulse-subtle">
-          <div className="flex items-center gap-3">
-            <div className="bg-white/20 p-2 rounded-xl">
-              <Sparkles className="h-5 w-5 text-amber-300" />
-            </div>
-            <div>
-              <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider">
-                Limited Smart Offer
+      {/* RENDER TAB 2: SPICE PLATTER 3D */}
+      {activeTab === 'craft' && (
+        <div className="space-y-6 animate-in fade-in duration-500">
+          <div className="text-center space-y-2 max-w-xl mx-auto pb-4">
+            <Badge className="bg-moss/20 text-moss font-extrabold uppercase tracking-widest text-[9px] border border-moss/30 px-3 py-1">
+              Aroma Lab
+            </Badge>
+            <h1 className="text-3xl font-extrabold text-white tracking-tight">Spice Calibration</h1>
+            <p className="text-xs text-neutral-400 leading-relaxed">
+              Explore the five essential whole spices that form the aromatic signature of Kaizen. Rotate and scatter them to inspect their culinary profiles.
+            </p>
+          </div>
+          
+          <PlatterCraft />
+        </div>
+      )}
+
+      {/* RENDER TAB 3: TESTIMONIALS (GUEST ACCLAIM) */}
+      {activeTab === 'reviews' && (
+        <div className="space-y-8 animate-in fade-in duration-300">
+          
+          {/* Headline stats */}
+          <div className="bg-gradient-to-r from-neutral-950 via-charcoal to-neutral-900 border border-neutral-800/80 rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
+            
+            <div className="space-y-2 text-center md:text-left relative z-10">
+              <span className="text-amber-500 font-extrabold text-xs uppercase tracking-widest block">
+                Verified Diner & Critic Reviews
               </span>
-              <h4 className="font-semibold text-lg mt-1">
-                Save {Math.round(Number(featuredOffer.discount_pct))}% on {featuredItem.name}!
-              </h4>
-              <p className="text-xs text-white/90">
-                Automatically generated discount to prevent kitchen overstock. Grab it before it sells out!
+              <h2 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
+                Guest Testimonials & Culinary Acclaim
+              </h2>
+              <p className="text-xs text-neutral-400 leading-relaxed max-w-lg">
+                Real dining experience reports from Michelin guides, wine pairing experts, and valued regulars at Kaizen Modern Bistro.
               </p>
             </div>
-          </div>
-          <div className="flex items-center gap-3 shrink-0">
-            <div className="text-right">
-              <span className="line-through text-xs text-white/70">₹{featuredItem.price}</span>
-              <p className="font-bold text-lg">₹{Math.round(Number(featuredItem.price) * (1 - Number(featuredOffer.discount_pct) / 100))}</p>
+
+            <div className="flex items-center gap-6 bg-black/40 border border-neutral-800 p-5 rounded-2xl shrink-0 relative z-10 w-full md:w-auto justify-around md:justify-end">
+              <div className="text-center md:text-right">
+                <span className="text-3xl font-extrabold text-amber-400">4.9</span>
+                <div className="flex justify-center md:justify-end text-amber-500 text-xs mt-1">★★★★★</div>
+                <span className="text-[10px] text-neutral-500 font-bold block mt-0.5">520+ Reviews</span>
+              </div>
+              <div className="h-10 w-px bg-neutral-800" />
+              <div className="text-xs text-neutral-400 space-y-1">
+                <div className="flex justify-between gap-4 font-semibold">
+                  <span>Food Quality</span>
+                  <span className="text-amber-400">4.9 / 5.0</span>
+                </div>
+                <div className="flex justify-between gap-4 font-semibold">
+                  <span>Atmosphere</span>
+                  <span className="text-amber-400">4.8 / 5.0</span>
+                </div>
+                <div className="flex justify-between gap-4 font-semibold font-medium text-neutral-500">
+                  <span>Service Excellence</span>
+                  <span className="text-amber-400">5.0 / 5.0</span>
+                </div>
+              </div>
             </div>
-            <Button
-              onClick={() => {
-                if (!user) {
-                  router.push('/signup')
-                  return
-                }
-                addItem({
-                  menuItemId: featuredItem.id,
-                  name: featuredItem.name,
-                  price: Number(featuredItem.price) * (1 - Number(featuredOffer.discount_pct) / 100)
-                })
-              }}
-              className="bg-white text-orange-600 hover:bg-orange-50 font-bold shadow-md rounded-xl px-4 py-2"
-            >
-              {user ? 'Claim Offer' : 'Login to Claim'}
-            </Button>
+          </div>
+
+          {/* Testimonial Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            {/* Critic Review 1 */}
+            <div className="bg-gradient-to-b from-neutral-950 to-charcoal border border-neutral-850 p-6 rounded-3xl shadow-xl flex flex-col justify-between hover:border-amber-900/30 transition-all duration-300">
+              <div className="space-y-4">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img 
+                      src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80" 
+                      alt="Eleanor Vance" 
+                      className="w-10 h-10 rounded-full object-cover border border-amber-900/40"
+                    />
+                    <div>
+                      <h4 className="font-bold text-white text-sm flex items-center gap-1.5">
+                        Eleanor Vance
+                        <Check className="h-3.5 w-3.5 text-emerald-400 bg-emerald-950/80 rounded-full p-0.5" />
+                      </h4>
+                      <p className="text-[10px] text-neutral-400 font-medium">Food & Wine Critic, NY Gastronomer</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-amber-500 text-xs">★★★★★</span>
+                    <p className="text-[9px] text-neutral-500 font-bold block mt-0.5">July 18, 2026</p>
+                  </div>
+                </div>
+
+                <span className="inline-block bg-amber-500/10 text-amber-400 text-[9px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full border border-amber-500/20">
+                  ★ Michelin Guide Press Contributor
+                </span>
+
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {['5-Course Tasting Menu', 'Dal Makhani', 'Butter Chicken'].map(tag => (
+                    <Badge key={tag} className="bg-neutral-900 hover:bg-neutral-900 border border-neutral-800 text-[9px] text-neutral-400 font-semibold">{tag}</Badge>
+                  ))}
+                </div>
+
+                <p className="text-xs text-neutral-300 leading-relaxed italic pt-2">
+                  "An absolute masterclass in traditional Indian flavor calibration. The Butter Chicken melted in mouth-watering butteriness, paired perfectly with their slow-cooked Dal Makhani. Kaizen remains our premier dining recommendation this year."
+                </p>
+              </div>
+
+              <div className="border-t border-neutral-900/60 mt-5 pt-3 flex justify-between items-center text-[10px] text-neutral-500">
+                <span>Was this review helpful?</span>
+                <button className="text-amber-500/80 hover:text-amber-400 font-bold flex items-center gap-1">
+                  👍 42 helpful
+                </button>
+              </div>
+            </div>
+
+            {/* Critic Review 2 */}
+            <div className="bg-gradient-to-b from-neutral-950 to-charcoal border border-neutral-855 p-6 rounded-3xl shadow-xl flex flex-col justify-between hover:border-amber-900/30 transition-all duration-300">
+              <div className="space-y-4">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img 
+                      src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80" 
+                      alt="Marcus Sterling" 
+                      className="w-10 h-10 rounded-full object-cover border border-amber-900/40"
+                    />
+                    <div>
+                      <h4 className="font-bold text-white text-sm flex items-center gap-1.5">
+                        Marcus Sterling
+                        <Check className="h-3.5 w-3.5 text-emerald-400 bg-emerald-950/80 rounded-full p-0.5" />
+                      </h4>
+                      <p className="text-[10px] text-neutral-400 font-medium">Verified Premier Diner</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-amber-500 text-xs">★★★★★</span>
+                    <p className="text-[9px] text-neutral-500 font-bold block mt-0.5">July 22, 2026</p>
+                  </div>
+                </div>
+
+                <span className="inline-block bg-emerald-500/10 text-emerald-400 text-[9px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                  ✓ Verified VIP Diner
+                </span>
+
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {['Mutton Rogan Josh', 'Garlic Naan', 'Mango Lassi'].map(tag => (
+                    <Badge key={tag} className="bg-neutral-900 hover:bg-neutral-900 border border-neutral-800 text-[9px] text-neutral-400 font-semibold">{tag}</Badge>
+                  ))}
+                </div>
+
+                <p className="text-xs text-neutral-300 leading-relaxed italic pt-2">
+                  "Celebrated our 10th anniversary at Table #4. The staff greeted us with a complimentary dessert. Slow-braised Mutton Rogan Josh was intensely flavorful, especially when paired with fresh hot Garlic Naan. Exceptional service!"
+                </p>
+              </div>
+
+              <div className="border-t border-neutral-900/60 mt-5 pt-3 flex justify-between items-center text-[10px] text-neutral-500">
+                <span>Was this review helpful?</span>
+                <button className="text-amber-500/80 hover:text-amber-400 font-bold flex items-center gap-1">
+                  👍 18 helpful
+                </button>
+              </div>
+            </div>
+
+            {/* Review 3 */}
+            <div className="bg-gradient-to-b from-neutral-950 to-charcoal border border-neutral-850 p-6 rounded-3xl shadow-xl flex flex-col justify-between hover:border-amber-900/30 transition-all duration-300">
+              <div className="space-y-4">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img 
+                      src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80" 
+                      alt="Anjali Sharma" 
+                      className="w-10 h-10 rounded-full object-cover border border-amber-900/40"
+                    />
+                    <div>
+                      <h4 className="font-bold text-white text-sm flex items-center gap-1.5">
+                        Anjali Sharma
+                        <Check className="h-3.5 w-3.5 text-emerald-400 bg-emerald-950/80 rounded-full p-0.5" />
+                      </h4>
+                      <p className="text-[10px] text-neutral-400 font-medium">Local Guide (Level 8)</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-amber-500 text-xs">★★★★★</span>
+                    <p className="text-[9px] text-neutral-500 font-bold block mt-0.5">June 30, 2026</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {['Veg Spring Rolls', 'Chilli Paneer', 'Rasmalai'].map(tag => (
+                    <Badge key={tag} className="bg-neutral-900 hover:bg-neutral-900 border border-neutral-800 text-[9px] text-neutral-400 font-semibold">{tag}</Badge>
+                  ))}
+                </div>
+
+                <p className="text-xs text-neutral-300 leading-relaxed italic pt-2">
+                  "If you are ordering starters, Chilli Paneer is a absolute must. Wok tossed to perfection with just the right amount of tang. For desserts, the Rasmalai is cold, creamy, and infused with real cardamom flavor."
+                </p>
+              </div>
+
+              <div className="border-t border-neutral-900/60 mt-5 pt-3 flex justify-between items-center text-[10px] text-neutral-500">
+                <span>Was this review helpful?</span>
+                <button className="text-amber-500/80 hover:text-amber-400 font-bold flex items-center gap-1">
+                  👍 29 helpful
+                </button>
+              </div>
+            </div>
+
+            {/* Review 4 */}
+            <div className="bg-gradient-to-b from-neutral-950 to-charcoal border border-neutral-850 p-6 rounded-3xl shadow-xl flex flex-col justify-between hover:border-amber-900/30 transition-all duration-300">
+              <div className="space-y-4">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img 
+                      src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80" 
+                      alt="Dr. Rohan Mehta" 
+                      className="w-10 h-10 rounded-full object-cover border border-amber-900/40"
+                    />
+                    <div>
+                      <h4 className="font-bold text-white text-sm flex items-center gap-1.5">
+                        Dr. Rohan Mehta
+                        <Check className="h-3.5 w-3.5 text-emerald-400 bg-emerald-950/80 rounded-full p-0.5" />
+                      </h4>
+                      <p className="text-[10px] text-neutral-400 font-medium">Regular Diner</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-amber-500 text-xs">★★★★☆</span>
+                    <p className="text-[9px] text-neutral-500 font-bold block mt-0.5">July 05, 2026</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {['Tandoori Chicken Wings', 'Vegetable Biryani', 'Kulfi'].map(tag => (
+                    <Badge key={tag} className="bg-neutral-900 hover:bg-neutral-900 border border-neutral-800 text-[9px] text-neutral-400 font-semibold">{tag}</Badge>
+                  ))}
+                </div>
+
+                <p className="text-xs text-neutral-300 leading-relaxed italic pt-2">
+                  "Fantastic dining workflow! The table-session ordering is extremely fluid. We sat down, joined Table 7 on our phones, customized our spices, and orders were served within 10 minutes. A solid 4.5 stars."
+                </p>
+              </div>
+
+              <div className="border-t border-neutral-900/60 mt-5 pt-3 flex justify-between items-center text-[10px] text-neutral-500">
+                <span>Was this review helpful?</span>
+                <button className="text-amber-500/80 hover:text-amber-400 font-bold flex items-center gap-1">
+                  👍 12 helpful
+                </button>
+              </div>
+            </div>
+
           </div>
         </div>
       )}
-
-      {/* Menu Categories & Items */}
-      <div className="space-y-12">
-        {categories.map((category) => (
-          <section key={category.id} className="space-y-6">
-            <div className="flex items-center gap-3 border-b border-neutral-100 pb-3">
-              <h2 className="text-2xl font-bold tracking-tight text-neutral-800">{category.name}</h2>
-              <Badge variant="secondary" className="rounded-md font-medium text-xs">
-                {category.menu_items.length} items
-              </Badge>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {category.menu_items.map((item) => {
-                const isSoldOut =
-                  item.is_available === false ||
-                  (item.remaining_stock !== null && item.remaining_stock <= 0)
-
-                const offer = getItemOffer(item.id)
-                const finalPrice = offer
-                  ? Number(item.price) * (1 - Number(offer.discount_pct) / 100)
-                  : Number(item.price)
-
-                return (
-                  <Card 
-                    key={item.id} 
-                    className={`relative overflow-hidden transition-all duration-300 border border-neutral-200/60 shadow-sm hover:shadow-md hover:-translate-y-0.5 ${
-                      isSoldOut ? 'opacity-50 select-none bg-neutral-50/50' : 'bg-white'
-                    }`}
-                  >
-                    {offer && !isSoldOut && (
-                      <div className="absolute top-0 right-0 bg-gradient-to-l from-red-500 to-orange-500 text-white text-xxs font-bold px-3 py-1 rounded-bl-xl uppercase tracking-wider flex items-center gap-1 shadow-sm">
-                        <Sparkles className="h-3 w-3" />
-                        <span>{Math.round(Number(offer.discount_pct))}% OFF</span>
-                      </div>
-                    )}
-                    <CardHeader className="p-5 pb-2">
-                      <CardTitle className="text-base font-bold text-neutral-800 pr-16 truncate">
-                        {item.name}
-                      </CardTitle>
-                      <div className="flex items-center gap-2 mt-1">
-                        {isSoldOut ? (
-                          <Badge variant="destructive" className="rounded-md font-semibold text-xxs px-2 py-0.5">
-                            Not Available
-                          </Badge>
-                        ) : (
-                          <Badge 
-                            variant="secondary" 
-                            className="rounded-md font-semibold text-xxs px-2 py-0.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-50 border border-emerald-200/60 font-medium"
-                          >
-                            Available
-                          </Badge>
-                        )}
-                      </div>
-                    </CardHeader>
-                    <CardContent className="p-5 pt-0 space-y-4">
-                      {item.description && (
-                        <p className="text-xs text-neutral-500 line-clamp-2 h-8">
-                          {item.description}
-                        </p>
-                      )}
-                      <div className="flex items-baseline justify-between pt-2">
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-lg font-extrabold text-neutral-900">
-                            ₹{finalPrice}
-                          </span>
-                          {offer && (
-                            <span className="text-xs text-neutral-400 line-through">
-                              ₹{item.price}
-                            </span>
-                          )}
-                        </div>
-                        <AddToCartButton
-                          menuItemId={item.id}
-                          name={item.name}
-                          price={finalPrice}
-                          disabled={isSoldOut}
-                        />
-                      </div>
-                      {items.some(i => i.menuItemId === item.id) && (
-                        <MenuItemPairing menuItemId={item.id} />
-                      )}
-                    </CardContent>
-                  </Card>
-                )
-              })}
-            </div>
-          </section>
-        ))}
-      </div>
 
       {/* Change Table Modal (simple overlay) */}
       {tableModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full mx-4 shadow-xl border border-neutral-100 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md">
+          <div className="bg-charcoal border border-neutral-800 rounded-3xl p-6 max-w-sm w-full mx-4 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
             <div className="space-y-1">
-              <h3 className="text-lg font-bold text-neutral-800">Switch Table Session</h3>
-              <p className="text-xs text-neutral-500">
-                Select your new table number below. This will move you to the new table's shared session.
+              <h3 className="text-lg font-extrabold text-white">Switch Table Session</h3>
+              <p className="text-xs text-neutral-400 leading-relaxed">
+                Select your new table number below. This will transition you to the new table's shared group order session.
               </p>
             </div>
             <select
               value={selectedTable}
               onChange={(e) => setSelectedTable(e.target.value)}
-              className="w-full bg-white border border-neutral-200 rounded-lg px-3 py-2 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium"
+              className="w-full bg-black/60 border border-neutral-800 rounded-xl px-4 py-2.5 text-xs text-amber-200 focus:outline-none focus:ring-1 focus:ring-amber-500 font-bold"
             >
-              <option value="">Choose Table...</option>
+              <option value="" className="bg-charcoal text-neutral-400">Choose Table...</option>
               {tables.map((t) => (
-                <option key={t.id} value={t.id}>
+                <option key={t.id} value={t.id} className="bg-charcoal text-white font-bold">
                   Table {t.table_number} ({t.status})
                 </option>
               ))}
@@ -439,7 +888,7 @@ export function ClientMenu({ initialCategories }: Props) {
                 variant="ghost"
                 size="sm"
                 onClick={() => setTableModalOpen(false)}
-                className="text-neutral-500 hover:bg-neutral-100 font-medium"
+                className="text-neutral-400 hover:text-white hover:bg-neutral-900 rounded-xl font-bold text-xs"
               >
                 Cancel
               </Button>
@@ -447,7 +896,7 @@ export function ClientMenu({ initialCategories }: Props) {
                 size="sm"
                 disabled={!selectedTable}
                 onClick={() => handleSelectTable(selectedTable)}
-                className="bg-amber-600 hover:bg-amber-700 text-white font-medium"
+                className="bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl px-4 py-2 text-xs cursor-pointer"
               >
                 Confirm Switch
               </Button>

@@ -156,22 +156,22 @@ export function CustomerHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
+    <header className="sticky top-0 z-50 bg-neutral-950/80 backdrop-blur-md border-b border-neutral-900">
       <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
         {/* Brand Logo */}
-        <Link href="/menu" className="flex items-center gap-2 text-xl font-bold tracking-tight text-primary hover:opacity-90 transition-opacity">
-          <Coffee className="h-5 w-5 text-amber-600 animate-pulse" />
-          <span>KAIZEN</span>
+        <Link href="/menu" className="flex items-center gap-2 text-xl font-extrabold tracking-tight text-white hover:opacity-90 transition-opacity">
+          <Coffee className="h-5 w-5 text-amber-500 animate-pulse" />
+          <span className="tracking-widest font-black">KAIZEN</span>
         </Link>
 
         {/* Navigation & Controls */}
         <div className="flex items-center gap-4">
           {/* Table Session Indicator */}
           {tableNumber && user ? (
-            <div className="hidden sm:flex items-center gap-2 bg-amber-50 text-amber-800 text-xs px-3 py-1.5 rounded-full border border-amber-200">
-              <span className="font-semibold">Table {tableNumber}</span>
+            <div className="hidden sm:flex items-center gap-2 bg-amber-950/40 text-amber-300 text-xs px-3 py-1.5 rounded-full border border-amber-900/30">
+              <span className="font-bold">Table {tableNumber}</span>
               {sessionId && (
-                <Link href={`/group/${sessionId}`} className="underline hover:text-amber-900 ml-1 font-medium">
+                <Link href={`/group/${sessionId}`} className="underline hover:text-amber-200 ml-1 font-bold">
                   Group Cart
                 </Link>
               )}
@@ -187,7 +187,7 @@ export function CustomerHeader() {
                   router.refresh()
                 }} 
                 title="Leave table"
-                className="hover:text-red-600 ml-1 transition-colors"
+                className="hover:text-red-400 ml-1 transition-colors cursor-pointer"
               >
                 <LogOut className="h-3 w-3" />
               </button>
@@ -197,7 +197,7 @@ export function CustomerHeader() {
           {/* Past Orders */}
           <Link 
             href="/reorder" 
-            className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            className="flex items-center gap-1.5 text-sm font-semibold text-neutral-400 hover:text-white transition-colors"
             title="Past Orders"
           >
             <History className="h-4 w-4" />
@@ -208,7 +208,7 @@ export function CustomerHeader() {
           {activeOrderId && (
             <Link 
               href={`/order/${activeOrderId}`}
-              className="flex items-center gap-1 text-sm font-medium text-amber-600 hover:text-amber-700 transition-colors"
+              className="flex items-center gap-1.5 text-sm font-semibold text-amber-500 hover:text-amber-400 transition-colors"
               title="Track Active Order"
             >
               <Clock className="h-4 w-4 animate-spin-slow" />
@@ -219,19 +219,19 @@ export function CustomerHeader() {
           {/* Cart Trigger */}
           <Link 
             href="/cart"
-            className="relative flex items-center gap-2 bg-terracotta text-terracotta-foreground hover:bg-terracotta/90 transition-all shadow-sm rounded-full px-4 py-2 text-sm font-medium"
+            className="relative flex items-center gap-2 bg-amber-600 text-white hover:bg-amber-500 border border-amber-500/20 transition-all shadow-lg rounded-xl px-4 py-2 text-xs font-bold"
           >
             <ShoppingBag className="h-4 w-4" />
             <span>Cart</span>
             {itemCount > 0 ? (
-              <span className="absolute -top-1.5 -right-1.5 bg-amber-600 text-white rounded-full text-xxs font-bold h-5 w-5 flex items-center justify-center border-2 border-background animate-bounce-short">
+              <span className="absolute -top-1.5 -right-1.5 bg-red-650 text-white rounded-full text-[9px] font-black h-5 w-5 flex items-center justify-center border-2 border-neutral-950 animate-bounce-short">
                 {itemCount}
               </span>
             ) : null}
           </Link>
 
           {/* Divider */}
-          <span className="h-6 w-px bg-neutral-200 hidden sm:inline" />
+          <span className="h-6 w-px bg-neutral-850 hidden sm:inline" />
 
           {/* Profile, Dashboard & Role Switcher */}
           {user ? (
@@ -240,16 +240,16 @@ export function CustomerHeader() {
               {profile && (profile.role === 'staff' || profile.role === 'admin') ? (
                 <Link 
                   href="/dashboard/orders" 
-                  className="hidden md:flex items-center gap-1.5 bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-bold px-3 py-1.5 rounded-xl transition-all shadow-sm"
+                  className="hidden md:flex items-center gap-1.5 bg-white hover:bg-neutral-100 text-black text-xs font-bold px-3.5 py-1.5 rounded-xl transition-all shadow-sm"
                 >
                   <LayoutDashboard className="h-3.5 w-3.5" />
                   <span>Dashboard</span>
                 </Link>
               ) : (
-                /* Dashboard access is gated by a separate staff username/password, not this account */
+                /* Dashboard access is gated by a separate staff username/password */
                 <button
                   onClick={() => setShowStaffModal(true)}
-                  className="flex items-center gap-1 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xxs font-extrabold px-2.5 py-1.5 rounded-xl border border-amber-200 transition-colors cursor-pointer"
+                  className="flex items-center gap-1 bg-amber-950/40 hover:bg-amber-900/40 text-amber-300 text-[10px] font-extrabold px-3 py-1.5 rounded-xl border border-amber-900/35 transition-colors cursor-pointer"
                   title="Staff & Admin Access"
                 >
                   <LayoutDashboard className="h-3.5 w-3.5" />
@@ -261,7 +261,7 @@ export function CustomerHeader() {
               <button 
                 onClick={handleLogout} 
                 title="Log Out"
-                className="text-neutral-500 hover:text-neutral-900 transition-colors p-1"
+                className="text-neutral-400 hover:text-white transition-colors p-1 cursor-pointer"
               >
                 <LogOut className="h-4 w-4" />
               </button>
@@ -270,14 +270,14 @@ export function CustomerHeader() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowStaffModal(true)}
-                className="flex items-center gap-1.5 bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-bold px-3 py-1.5 rounded-xl transition-all shadow-sm cursor-pointer"
+                className="flex items-center gap-1.5 bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 text-neutral-300 text-xs font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer"
               >
-                <LayoutDashboard className="h-3.5 w-3.5" />
+                <LayoutDashboard className="h-3.5 w-3.5 text-amber-500" />
                 <span>Staff Access</span>
               </button>
               <Link
                 href="/signup"
-                className="text-xs font-bold text-terracotta hover:text-terracotta-foreground bg-terracotta/10 hover:bg-terracotta px-3.5 py-2 rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
+                className="text-xs font-bold text-amber-400 hover:text-black bg-amber-500/10 hover:bg-amber-500 px-3.5 py-2 rounded-xl transition-all flex items-center gap-1 cursor-pointer border border-amber-500/20"
               >
                 <User className="h-3.5 w-3.5" />
                 <span>Sign Up</span>
@@ -289,8 +289,8 @@ export function CustomerHeader() {
 
       {/* Staff Access Modal */}
       {showStaffModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl border border-neutral-100 relative animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4">
+          <div className="bg-charcoal rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-neutral-800 relative animate-in fade-in zoom-in-95 duration-200">
             <button
               onClick={() => {
                 setShowStaffModal(false)
@@ -298,45 +298,45 @@ export function CustomerHeader() {
                 setStaffUsername('')
                 setStaffPassword('')
               }}
-              className="absolute top-4 right-4 text-neutral-400 hover:text-neutral-600 transition-colors text-lg font-bold w-6 h-6 flex items-center justify-center rounded-full hover:bg-neutral-100"
+              className="absolute top-4 right-4 text-neutral-400 hover:text-white transition-colors text-lg font-bold w-6 h-6 flex items-center justify-center rounded-full hover:bg-neutral-800 cursor-pointer"
             >
               &times;
             </button>
             <div className="space-y-4">
               <div className="text-center">
-                <div className="mx-auto w-10 h-10 bg-terracotta/10 rounded-full flex items-center justify-center mb-2">
-                  <Coffee className="h-5 w-5 text-terracotta" />
+                <div className="mx-auto w-10 h-10 bg-amber-500/10 rounded-full flex items-center justify-center mb-2 border border-amber-500/20">
+                  <Coffee className="h-5 w-5 text-amber-500" />
                 </div>
-                <h2 className="text-base font-extrabold text-neutral-800">Staff & Admin Access</h2>
-                <p className="text-xs text-neutral-500 mt-1">Provide credentials to enter the dashboard.</p>
+                <h2 className="text-base font-extrabold text-white">Staff & Admin Access</h2>
+                <p className="text-xs text-neutral-400 mt-1">Provide credentials to enter the management dashboard.</p>
               </div>
 
               <form onSubmit={handleStaffLogin} className="space-y-3">
                 <div>
-                  <label className="block text-xxs font-extrabold uppercase tracking-wider text-neutral-400 mb-1">Username</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-neutral-400 mb-1">Username</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. admin"
                     value={staffUsername}
                     onChange={(e) => setStaffUsername(e.target.value)}
-                    className="w-full text-xs border border-neutral-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-terracotta/20 focus:border-terracotta transition-all text-neutral-800"
+                    className="w-full text-xs bg-black/40 border border-neutral-800 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-1 focus:ring-amber-500 text-white placeholder-neutral-600 transition-all"
                   />
                 </div>
                 <div>
-                  <label className="block text-xxs font-extrabold uppercase tracking-wider text-neutral-400 mb-1">Password</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-neutral-400 mb-1">Password</label>
                   <input
                     type="password"
                     required
                     placeholder="••••••••"
                     value={staffPassword}
                     onChange={(e) => setStaffPassword(e.target.value)}
-                    className="w-full text-xs border border-neutral-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-terracotta/20 focus:border-terracotta transition-all text-neutral-800"
+                    className="w-full text-xs bg-black/40 border border-neutral-850 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-1 focus:ring-amber-500 text-white placeholder-neutral-600 transition-all"
                   />
                 </div>
 
                 {staffError && (
-                  <p className="text-red-600 text-xs bg-red-50 border border-red-100 rounded-xl px-3 py-2 font-medium">
+                  <p className="text-red-400 text-xs bg-red-950/40 border border-red-900/30 rounded-xl px-3 py-2 font-semibold">
                     {staffError}
                   </p>
                 )}
@@ -344,7 +344,7 @@ export function CustomerHeader() {
                 <button
                   type="submit"
                   disabled={verifyingStaff}
-                  className="w-full bg-terracotta hover:bg-terracotta/90 text-terracotta-foreground rounded-xl py-2.5 text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  className="w-full bg-amber-600 hover:bg-amber-500 text-white rounded-xl py-2.5 text-xs font-bold transition-all shadow-lg shadow-amber-900/20 flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
                 >
                   {verifyingStaff ? 'Verifying...' : 'Access Dashboard'}
                 </button>
