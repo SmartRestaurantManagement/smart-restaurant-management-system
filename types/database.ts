@@ -280,11 +280,13 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          image_url: string | null
           is_available: boolean
           name: string
           price: number
           remaining_stock: number | null
           restaurant_id: string
+          sort_order: number
           updated_at: string
         }
         Insert: {
@@ -292,11 +294,13 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          image_url?: string | null
           is_available?: boolean
           name: string
           price: number
           remaining_stock?: number | null
           restaurant_id: string
+          sort_order?: number
           updated_at?: string
         }
         Update: {
@@ -304,11 +308,13 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          image_url?: string | null
           is_available?: boolean
           name?: string
           price?: number
           remaining_stock?: number | null
           restaurant_id?: string
+          sort_order?: number
           updated_at?: string
         }
         Relationships: [

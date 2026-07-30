@@ -38,7 +38,7 @@ export function AddToCartButton({ menuItemId, name, price, disabled }: Props) {
       size="sm"
       disabled={disabled}
       onClick={() => addItem({ menuItemId, name, price })}
-      className="bg-terracotta text-terracotta-foreground hover:bg-terracotta/90"
+      className="bg-maroon text-maroon-foreground hover:bg-maroon-hover"
     >
       {disabled ? 'Unavailable' : 'Add to Cart'}
     </Button>
