@@ -34,6 +34,7 @@ export async function getMenu(): Promise<CategoryWithItems[]> {
       )
     `)
     .order('sort_order', { ascending: true })
+    .order('sort_order', { referencedTable: 'menu_items', ascending: true })
 
   if (error) {
     console.error('Failed to fetch menu:', error.message)

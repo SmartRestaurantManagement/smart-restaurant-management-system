@@ -9,6 +9,16 @@
   }
 }
 
+/* Kaizen marketing design (Home page) animations */
+@keyframes kz-float-up {
+  0% { opacity: 0; transform: translateY(26px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes kz-ticker {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
 @layer base {
   .theme {
     --font-heading: var(--font-sans);
@@ -141,6 +151,17 @@
   --color-moss-foreground: var(--moss-foreground);
   --color-charcoal: var(--charcoal);
   --color-charcoal-foreground: var(--charcoal-foreground);
+
+  /* Kaizen marketing design (Home, Menu pages) */
+  --color-cream: var(--cream);
+  --color-cream-strip: var(--cream-strip);
+  --color-cream-foreground: var(--cream-foreground);
+  --color-maroon: var(--maroon);
+  --color-maroon-hover: var(--maroon-hover);
+  --color-maroon-foreground: var(--maroon-foreground);
+  --color-hero-highlight: var(--hero-highlight);
+  --font-display: var(--font-anton);
+  --font-marketing: var(--font-inter);
 }
 
 :root {
@@ -153,6 +174,17 @@
   --moss-foreground: oklch(0.96 0.02 120);
   --charcoal: oklch(0.19 0.012 40);
   --charcoal-foreground: oklch(0.96 0.01 60);
+
+  /* Kaizen marketing design tokens - matches the Home/Menu design handoff
+     exactly: cream #F4EFE7, strip/card #EDE6DA, ink #201A16, maroon
+     #7C2D22, maroon hover #5E2119, hero highlight #E8B583. */
+  --cream: oklch(0.955 0.014 80);
+  --cream-strip: oklch(0.915 0.017 75);
+  --cream-foreground: oklch(0.235 0.014 45);
+  --maroon: oklch(0.365 0.11 30);
+  --maroon-hover: oklch(0.29 0.09 27);
+  --maroon-foreground: oklch(0.955 0.014 80);
+  --hero-highlight: oklch(0.82 0.09 60);
 
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);

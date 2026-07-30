@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { Anton, Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +13,20 @@ const geistMono = localFont({
   src: "./fonts/GeistMonoVF.woff",
   variable: "--font-geist-mono",
   weight: "100 900",
+});
+
+// Display/body pair for the Kaizen marketing pages (Home, Menu) only -
+// scoped via CSS variables rather than replacing the app-wide Geist
+// font-sans default used elsewhere (dashboard, cart, etc).
+const anton = Anton({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-anton",
+});
+const interMarketing = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-inter",
 });
 
 export const metadata: Metadata = {
@@ -28,7 +43,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={cn("font-sans", geistSans.variable)}>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${anton.variable} ${interMarketing.variable} antialiased`}
       >
         {children}
       </body>

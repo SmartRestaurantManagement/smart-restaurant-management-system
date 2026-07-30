@@ -4,16 +4,17 @@ import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { getAuthErrorMessage } from '@/lib/auth/get-auth-error-message'
-import { Button } from '@/components/ui/button'
-import { Mail } from 'lucide-react'
+import { Mail, PartyPopper } from 'lucide-react'
 
 function VerifyOtpForm() {
   const [otp, setOtp] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [welcomeName, setWelcomeName] = useState<string | null>(null)
   const router = useRouter()
   const searchParams = useSearchParams()
   const email = searchParams.get('email') || ''
+  const name = searchParams.get('name') || ''
   const supabase = createClient()
 
   const handleVerify = async (e: React.FormEvent) => {
@@ -30,23 +31,45 @@ function VerifyOtpForm() {
       setError(getAuthErrorMessage(error))
       return
     }
-    router.push('/menu')
+
+    if (name) {
+      setWelcomeName(name)
+      setTimeout(() => router.push('/menu'), 1800)
+    } else {
+      router.push('/menu')
+    }
+  }
+
+  if (welcomeName) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-cream px-4 font-[family-name:var(--font-marketing)]">
+        <div className="w-full max-w-sm rounded-sm border border-black/10 bg-white shadow-sm px-7 py-12 text-center space-y-3 animate-in fade-in zoom-in-95 duration-300">
+          <div className="mx-auto w-14 h-14 rounded-full bg-maroon/10 flex items-center justify-center">
+            <PartyPopper className="h-6 w-6 text-maroon" />
+          </div>
+          <h1 className="font-display text-2xl tracking-[0.01em] text-cream-foreground">
+            Hey {welcomeName}, welcome to Kaizen!
+          </h1>
+          <p className="text-sm text-cream-foreground/60">Taking you to the menu...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-amber-50 via-white to-amber-50/40 px-4">
-      <div className="w-full max-w-sm rounded-2xl border border-neutral-200 bg-white shadow-lg shadow-terracotta/5 overflow-hidden">
-        <div className="text-center space-y-2 pt-8 px-6">
-          <div className="mx-auto w-12 h-12 rounded-full bg-terracotta/10 flex items-center justify-center">
-            <Mail className="h-6 w-6 text-terracotta" />
+    <div className="min-h-screen flex items-center justify-center bg-cream px-4 font-[family-name:var(--font-marketing)]">
+      <div className="w-full max-w-sm rounded-sm border border-black/10 bg-white shadow-sm overflow-hidden">
+        <div className="text-center space-y-2 pt-10 px-7">
+          <div className="mx-auto w-14 h-14 rounded-full bg-maroon/10 flex items-center justify-center">
+            <Mail className="h-6 w-6 text-maroon" />
           </div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-neutral-800">Verify your email</h1>
-          <p className="text-sm text-neutral-500">
-            Code sent to <span className="font-semibold text-neutral-700">{email}</span>
+          <h1 className="font-display text-2xl tracking-[0.01em] text-cream-foreground">Verify your email</h1>
+          <p className="text-sm text-cream-foreground/60">
+            Code sent to <span className="font-semibold text-cream-foreground">{email}</span>
           </p>
         </div>
 
-        <form onSubmit={handleVerify} className="space-y-4 px-6 pb-8 pt-6">
+        <form onSubmit={handleVerify} className="space-y-4 px-7 pb-10 pt-7">
           <input
             type="text"
             placeholder="6-digit code"
@@ -54,16 +77,16 @@ function VerifyOtpForm() {
             onChange={(e) => setOtp(e.target.value)}
             maxLength={6}
             required
-            className="w-full rounded-xl border border-neutral-200 px-4 py-2.5 text-center text-lg tracking-[0.4em] text-neutral-800 transition-all focus:border-terracotta focus:outline-none focus:ring-2 focus:ring-terracotta/25"
+            className="w-full rounded-sm border border-black/15 px-4 py-3 text-center text-lg tracking-[0.4em] text-cream-foreground transition-all focus:border-maroon focus:outline-none focus:ring-2 focus:ring-maroon/20"
           />
-          {error && <p className="text-sm text-red-500">{error}</p>}
-          <Button
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-xl bg-terracotta py-5 text-sm font-bold text-terracotta-foreground hover:bg-terracotta/90"
+            className="w-full rounded-sm bg-maroon hover:bg-maroon-hover disabled:opacity-50 py-3.5 text-sm font-semibold tracking-[0.04em] text-maroon-foreground transition-colors cursor-pointer"
           >
             {loading ? 'Verifying...' : 'Verify'}
-          </Button>
+          </button>
         </form>
       </div>
     </div>
@@ -74,7 +97,7 @@ export default function VerifyOtpPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-amber-50 via-white to-amber-50/40 text-sm text-neutral-500">
+        <div className="min-h-screen flex items-center justify-center bg-cream text-sm text-cream-foreground/60 font-[family-name:var(--font-marketing)]">
           Loading...
         </div>
       }

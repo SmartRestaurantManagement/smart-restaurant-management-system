@@ -4,10 +4,10 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { getAuthErrorMessage } from '@/lib/auth/get-auth-error-message'
-import { Button } from '@/components/ui/button'
 import { Coffee } from 'lucide-react'
 
 export default function SignupPage() {
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -21,7 +21,7 @@ export default function SignupPage() {
 
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { shouldCreateUser: true },
+      options: { shouldCreateUser: true, data: { full_name: name.trim() } },
     })
 
     setLoading(false)
@@ -31,39 +31,47 @@ export default function SignupPage() {
       return
     }
 
-    router.push(`/verify-otp?email=${encodeURIComponent(email)}`)
+    router.push(`/verify-otp?email=${encodeURIComponent(email)}&name=${encodeURIComponent(name.trim())}`)
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-amber-50 via-white to-amber-50/40 px-4">
-      <div className="w-full max-w-sm rounded-2xl border border-neutral-200 bg-white shadow-lg shadow-terracotta/5 overflow-hidden">
-        <div className="text-center space-y-2 pt-8 px-6">
-          <div className="mx-auto w-12 h-12 rounded-full bg-terracotta/10 flex items-center justify-center">
-            <Coffee className="h-6 w-6 text-terracotta" />
+    <div className="min-h-screen flex items-center justify-center bg-cream px-4 font-[family-name:var(--font-marketing)]">
+      <div className="w-full max-w-sm rounded-sm border border-black/10 bg-white shadow-sm overflow-hidden">
+        <div className="text-center space-y-2 pt-10 px-7">
+          <div className="mx-auto w-14 h-14 rounded-full bg-maroon/10 flex items-center justify-center">
+            <Coffee className="h-6 w-6 text-maroon" />
           </div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-neutral-800">Sign up for Kaizen</h1>
-          <p className="text-sm text-neutral-500">
-            Enter your email and we&apos;ll send you a one-time code - no password needed.
+          <h1 className="font-display text-2xl tracking-[0.01em] text-cream-foreground">Sign up for Kaizen</h1>
+          <p className="text-sm text-cream-foreground/60">
+            Tell us who you are and we&apos;ll send a one-time code - no password needed.
           </p>
         </div>
 
-        <form onSubmit={handleSignup} className="space-y-4 px-6 pb-8 pt-6">
+        <form onSubmit={handleSignup} className="space-y-4 px-7 pb-10 pt-7">
+          <input
+            type="text"
+            placeholder="Your name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            className="w-full rounded-sm border border-black/15 px-4 py-3 text-sm text-cream-foreground transition-all focus:border-maroon focus:outline-none focus:ring-2 focus:ring-maroon/20"
+          />
           <input
             type="email"
             placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="w-full rounded-xl border border-neutral-200 px-4 py-2.5 text-sm text-neutral-800 transition-all focus:border-terracotta focus:outline-none focus:ring-2 focus:ring-terracotta/25"
+            className="w-full rounded-sm border border-black/15 px-4 py-3 text-sm text-cream-foreground transition-all focus:border-maroon focus:outline-none focus:ring-2 focus:ring-maroon/20"
           />
-          {error && <p className="text-sm text-red-500">{error}</p>}
-          <Button
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-xl bg-terracotta py-5 text-sm font-bold text-terracotta-foreground hover:bg-terracotta/90"
+            className="w-full rounded-sm bg-maroon hover:bg-maroon-hover disabled:opacity-50 py-3.5 text-sm font-semibold tracking-[0.04em] text-maroon-foreground transition-colors cursor-pointer"
           >
             {loading ? 'Sending code...' : 'Continue'}
-          </Button>
+          </button>
         </form>
       </div>
     </div>
