@@ -119,12 +119,6 @@ export function HomeClient({ specials, categoryTiles, heroImages, featuredItem, 
           >
             SIGN UP TO ORDER
           </Link>
-          <Link
-            href="/menu"
-            className="w-full text-center bg-maroon hover:bg-maroon-hover text-maroon-foreground text-xs font-semibold tracking-[0.1em] px-4 py-3 rounded-sm transition-colors"
-          >
-            ORDER ONLINE &rarr;
-          </Link>
           <div className="text-[11px] text-cream/45 text-center leading-relaxed mt-3">
             Open daily
             <br />
@@ -140,9 +134,6 @@ export function HomeClient({ specials, categoryTiles, heroImages, featuredItem, 
           <div className="flex items-center gap-2">
             <Link href="/signup" className="border border-cream/30 text-cream text-xs font-semibold px-3 py-2 rounded-sm">
               SIGN UP
-            </Link>
-            <Link href="/menu" className="bg-maroon text-maroon-foreground text-xs font-semibold px-4 py-2 rounded-sm">
-              ORDER ONLINE
             </Link>
           </div>
         </div>
