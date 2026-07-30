@@ -47,6 +47,9 @@ export default function ServiceRequestsDashboard() {
   }, [supabase])
 
   useEffect(() => {
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    let active = true
+
     (async () => {
       setLoading(true)
       
@@ -57,6 +60,8 @@ export default function ServiceRequestsDashboard() {
         rid = data?.id || null
       }
 
+      if (!active) return
+
       if (!rid) {
         setError("Could not resolve restaurant ID.")
         setLoading(false)
@@ -65,10 +70,11 @@ export default function ServiceRequestsDashboard() {
 
       setRestaurantId(rid)
       await loadRequests(rid)
+      if (!active) return
       setLoading(false)
 
       // Subscribe to service_requests changes for this restaurant
-      const channel = supabase
+      const chan = supabase
         .channel(`service-calls-${rid}`)
         .on(
           'postgres_changes',
@@ -82,12 +88,20 @@ export default function ServiceRequestsDashboard() {
             void loadRequests(rid)
           }
         )
-        .subscribe()
 
-      return () => {
-        supabase.removeChannel(channel)
+      channel = chan
+
+      if (active) {
+        chan.subscribe()
       }
     })()
+
+    return () => {
+      active = false
+      if (channel) {
+        supabase.removeChannel(channel)
+      }
+    }
   }, [supabase, loadRequests])
 
   // Update SLA clock every second

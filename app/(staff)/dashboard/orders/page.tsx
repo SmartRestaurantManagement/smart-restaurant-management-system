@@ -75,9 +75,11 @@ export default function OrdersPage() {
   useEffect(() => {
     const supabase = createClient();
     let channel: ReturnType<typeof supabase.channel> | null = null;
+    let active = true;
 
     (async () => {
       const rid = await getCallerRestaurantId(supabase);
+      if (!active) return;
       if (!rid) {
         setError("Could not resolve the caller's restaurant");
         setLoading(false);
@@ -85,9 +87,10 @@ export default function OrdersPage() {
       }
       setRestaurantId(rid);
       await loadOrders(rid);
+      if (!active) return;
       setLoading(false);
 
-      channel = supabase
+      const chan = supabase
         .channel(`orders-${rid}`)
         .on(
           "postgres_changes",
@@ -100,12 +103,20 @@ export default function OrdersPage() {
           () => {
             void loadOrders(rid);
           }
-        )
-        .subscribe();
+        );
+
+      channel = chan;
+
+      if (active) {
+        chan.subscribe();
+      }
     })();
 
     return () => {
-      if (channel) supabase.removeChannel(channel);
+      active = false;
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
     };
   }, [loadOrders]);
 

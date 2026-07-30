@@ -184,17 +184,7 @@ export function HomeClient({ specials, categoryTiles, heroImages }: Props) {
           </div>
         </section>
 
-        {/* Ticker */}
-      <div className="border-y border-black/10 overflow-hidden bg-cream-strip">
-        <div className="flex w-max" style={{ animation: "kz-ticker 26s linear infinite" }}>
-          {[...TICKER, ...TICKER].map((t, i) => (
-            <div key={i} className="flex items-center gap-2.5 px-10 py-4 whitespace-nowrap border-r border-black/10">
-              <span className="w-1.5 h-1.5 rounded-full bg-maroon shrink-0" />
-              <span className="text-xs font-semibold tracking-[0.1em] text-cream-foreground">{t}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+
 
       {/* Best Picks */}
       {specials.length > 0 && (

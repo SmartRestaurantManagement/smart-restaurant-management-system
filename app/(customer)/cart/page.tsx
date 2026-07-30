@@ -180,6 +180,10 @@ export default function CartPage() {
 
   const handlePlaceOrder = async () => {
     if (items.length === 0) return
+    if (!tableId) {
+      setError('Please select a table on the menu page before placing your order.');
+      return;
+    }
     if (allergenConflict?.blocked) {
       setError('Please resolve allergen conflicts before checkout.');
       return;
@@ -288,7 +292,7 @@ export default function CartPage() {
       </h1>
 
       {/* Table Session Details */}
-      {tableNumber && (
+      {tableNumber ? (
         <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 text-sm text-emerald-800 flex items-center justify-between">
           <div>
             <span>Seated Table: <strong className="font-semibold text-emerald-950">Table {tableNumber}</strong></span>
@@ -297,6 +301,16 @@ export default function CartPage() {
           <Badge className="bg-emerald-600 text-white font-medium border-0">
             Dine-In Activated
           </Badge>
+        </div>
+      ) : (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-sm text-red-800 flex items-center gap-3">
+          <AlertTriangle className="h-5 w-5 text-red-600 shrink-0" />
+          <div>
+            <span className="font-bold block text-red-950">No Table Selected!</span>
+            <p className="text-xxs text-red-700/80 mt-0.5">
+              You must select your table on the <a href="/menu" className="underline font-bold text-red-900">Menu Page</a> before you can place an order.
+            </p>
+          </div>
         </div>
       )}
 

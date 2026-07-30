@@ -47,6 +47,20 @@ export function ClientMenu({ initialCategories }: Props) {
   const [user, setUser] = useState<{ id: string } | null>(null)
   const [activeCategoryId, setActiveCategoryId] = useState<string>(initialCategories[0]?.id ?? '')
 
+  // Sort and Filter states
+  const [searchQuery, setSearchQuery] = useState('')
+  const [vegFilter, setVegFilter] = useState<'all' | 'veg' | 'non-veg'>('all')
+  const [maxPrice, setMaxPrice] = useState<number | ''>('')
+  const [sortBy, setSortBy] = useState<'default' | 'price-asc' | 'price-desc' | 'popularity'>('default')
+
+  // AI Assistant states
+  const [aiOpen, setAiOpen] = useState(false)
+  const [aiQuery, setAiQuery] = useState('')
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiMessages, setAiMessages] = useState<Array<{ sender: 'user' | 'ai'; text: string; suggestions?: Array<{ name: string; reason: string }> }>>([
+    { sender: 'ai', text: "Hello! I'm your Kaizen Dietary Assistant. Describe what you're craving or any dietary restrictions (Jain, Vegan, Gluten-Free, High-Protein, etc.), and I'll find the perfect dishes for you!" }
+  ])
+
   const supabase = useMemo(() => createClient(), [])
 
   // Auth state - table session only makes sense while signed in.
@@ -220,7 +234,98 @@ export function ClientMenu({ initialCategories }: Props) {
     ? categories.flatMap((c) => c.menu_items).find((item) => item.id === featuredOffer.menu_item_id)
     : null
 
-  const nonEmptyCategories = categories.filter((c) => c.menu_items.some((i) => i.is_available))
+  const handleAiSubmit = async (queryText: string) => {
+    if (aiLoading) return
+    setAiLoading(true)
+    setAiQuery('')
+    
+    // Add user message
+    setAiMessages((prev) => [...prev, { sender: 'user', text: queryText }])
+
+    try {
+      const res = await fetch('/api/ai/dietary-assistant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: queryText })
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setAiMessages((prev) => [
+          ...prev, 
+          { 
+            sender: 'ai', 
+            text: data.explanation || "I found some recommendations for you:", 
+            suggestions: data.suggestions 
+          }
+        ])
+      } else {
+        setAiMessages((prev) => [...prev, { sender: 'ai', text: data.error || "Something went wrong while processing your request. Please try again." }])
+      }
+    } catch {
+      setAiMessages((prev) => [...prev, { sender: 'ai', text: "Network error. Please try again." }])
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  // Filter and sort categories based on search query, veg toggle, price, and sort type
+  const filteredCategories = useMemo(() => {
+    return categories.map((cat) => {
+      // 1. Filter items
+      let items = cat.menu_items.filter((item) => {
+        if (!item.is_available) return false
+
+        // Search match
+        if (searchQuery.trim()) {
+          const query = searchQuery.toLowerCase()
+          const nameMatch = item.name.toLowerCase().includes(query)
+          const descMatch = item.description?.toLowerCase().includes(query) || false
+          if (!nameMatch && !descMatch) return false
+        }
+
+        // Veg check
+        const isItemVeg = isVeg(item.name)
+        if (vegFilter === 'veg' && !isItemVeg) return false
+        if (vegFilter === 'non-veg' && isItemVeg) return false
+
+        // Price check
+        if (maxPrice !== '') {
+          const finalPrice = getItemOffer(item.id)
+            ? Number(item.price) * (1 - Number(getItemOffer(item.id)!.discount_pct) / 100)
+            : Number(item.price)
+          if (finalPrice > maxPrice) return false
+        }
+
+        return true
+      })
+
+      // 2. Sort items
+      items = [...items].sort((a, b) => {
+        const getFinalPrice = (x: MenuItemWithIngredients) => {
+          const offer = getItemOffer(x.id)
+          return offer ? Number(x.price) * (1 - Number(offer.discount_pct) / 100) : Number(x.price)
+        }
+
+        if (sortBy === 'price-asc') {
+          return getFinalPrice(a) - getFinalPrice(b)
+        }
+        if (sortBy === 'price-desc') {
+          return getFinalPrice(b) - getFinalPrice(a)
+        }
+        if (sortBy === 'popularity') {
+          return getPopularityScore(b.name) - getPopularityScore(a.name)
+        }
+        return a.sort_order - b.sort_order
+      })
+
+      return {
+        ...cat,
+        menu_items: items,
+      }
+    }).filter((cat) => cat.menu_items.length > 0)
+  }, [categories, searchQuery, vegFilter, maxPrice, sortBy, activeOffers])
+
+  const nonEmptyCategories = filteredCategories
 
   return (
     <div className="font-[family-name:var(--font-marketing)] bg-cream min-h-screen">
@@ -277,7 +382,17 @@ export function ClientMenu({ initialCategories }: Props) {
                 Select your table to enable live ordering and split the bill with your group.
               </p>
             </div>
-            <div className="flex gap-2 shrink-0">
+            <div className="flex items-center gap-4 shrink-0 flex-wrap">
+              <button
+                onClick={() => {
+                  setServiceMessage('Please select your table first to call service.')
+                  setServiceModalOpen(true)
+                }}
+                className="text-maroon hover:text-maroon-hover font-bold underline text-xs flex items-center gap-1 cursor-pointer mr-2"
+              >
+                <Bell className="h-3.5 w-3.5" />
+                Call Service
+              </button>
               <select
                 value={selectedTable}
                 onChange={(e) => setSelectedTable(e.target.value)}
@@ -332,6 +447,104 @@ export function ClientMenu({ initialCategories }: Props) {
             </div>
           </div>
         )}
+
+        {/* Sort & Filter Bar */}
+        <div className="bg-white border border-black/10 rounded-2xl p-5 shadow-sm">
+          <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
+            {/* Search Input */}
+            <div className="relative w-full lg:max-w-xs">
+              <input
+                type="text"
+                placeholder="Search dishes..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-cream/35 border border-black/15 rounded-xl px-4 py-2.5 text-xs text-cream-foreground placeholder-cream-foreground/40 focus:outline-none focus:ring-1 focus:ring-maroon focus:border-maroon transition-all"
+              />
+              {searchQuery && (
+                <button 
+                  onClick={() => setSearchQuery('')} 
+                  className="absolute right-3 top-3 text-cream-foreground/45 hover:text-cream-foreground text-xs cursor-pointer font-bold"
+                >
+                  &times;
+                </button>
+              )}
+            </div>
+
+            {/* Price Limit Filter */}
+            <div className="flex items-center gap-2 w-full lg:w-auto">
+              <span className="text-xs font-bold text-cream-foreground/60 whitespace-nowrap">Max Price:</span>
+              <input
+                type="number"
+                placeholder="₹ Any"
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(e.target.value === '' ? '' : Number(e.target.value))}
+                className="w-20 bg-cream/35 border border-black/15 rounded-xl px-3 py-2 text-xs text-cream-foreground placeholder-cream-foreground/40 focus:outline-none focus:ring-1 focus:ring-maroon text-center font-bold"
+              />
+              {maxPrice !== '' && (
+                <button 
+                  onClick={() => setMaxPrice('')} 
+                  className="text-xs text-maroon hover:underline font-bold cursor-pointer"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            {/* Veg / Non-Veg Toggle (Green / Red style toggle) */}
+            <div className="flex items-center gap-1 bg-cream/35 border border-black/10 rounded-xl p-1 shrink-0 w-full lg:w-auto justify-between lg:justify-start">
+              <span className="text-xs font-bold text-cream-foreground/60 mr-2 lg:hidden">Diet:</span>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => setVegFilter('all')}
+                  className={`px-3 py-1.5 rounded-lg text-[10px] font-bold tracking-wider uppercase transition-all cursor-pointer ${
+                    vegFilter === 'all'
+                      ? 'bg-white text-cream-foreground shadow-sm border border-black/5'
+                      : 'text-cream-foreground/50 hover:text-cream-foreground'
+                  }`}
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => setVegFilter('veg')}
+                  className={`px-3 py-1.5 rounded-lg text-[10px] font-bold tracking-wider uppercase transition-all cursor-pointer flex items-center gap-1 ${
+                    vegFilter === 'veg'
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-emerald-600/80 hover:text-emerald-600'
+                  }`}
+                >
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  Veg
+                </button>
+                <button
+                  onClick={() => setVegFilter('non-veg')}
+                  className={`px-3 py-1.5 rounded-lg text-[10px] font-bold tracking-wider uppercase transition-all cursor-pointer flex items-center gap-1 ${
+                    vegFilter === 'non-veg'
+                      ? 'bg-rose-600 text-white shadow-sm'
+                      : 'text-rose-600/80 hover:text-rose-600'
+                  }`}
+                >
+                  <span className="h-1.5 w-1.5 rounded-full bg-rose-400" />
+                  Non-Veg
+                </button>
+              </div>
+            </div>
+
+            {/* Sort Select */}
+            <div className="flex items-center gap-2 w-full lg:w-auto">
+              <span className="text-xs font-bold text-cream-foreground/60 whitespace-nowrap">Sort:</span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="bg-cream/35 border border-black/15 rounded-xl px-3 py-2 text-xs text-cream-foreground font-semibold focus:outline-none focus:ring-1 focus:ring-maroon cursor-pointer w-full lg:w-auto"
+              >
+                <option value="default">Default Sort</option>
+                <option value="price-asc">Price: Low to High</option>
+                <option value="price-desc">Price: High to Low</option>
+                <option value="popularity">Most Ordered</option>
+              </select>
+            </div>
+          </div>
+        </div>
 
         {/* Floating smart offer banner */}
         {featuredItem && featuredOffer && (
@@ -506,16 +719,285 @@ export function ClientMenu({ initialCategories }: Props) {
           </div>
         </div>
       )}
+
+      {/* Floating AI Dietary Assistant Chat Button */}
+      {user && (
+        <div className="fixed bottom-6 right-6 z-40">
+          <button
+            onClick={() => setAiOpen(!aiOpen)}
+            className="bg-maroon text-maroon-foreground hover:bg-maroon-hover p-4 rounded-full shadow-2xl transition-all duration-300 hover:scale-110 flex items-center justify-center cursor-pointer border border-maroon/20 group relative"
+            title="Dietary Assistant"
+          >
+            <Sparkles className="h-6 w-6 animate-pulse" />
+            <span className="absolute -top-1 right-0 h-3.5 w-3.5 rounded-full bg-emerald-500 border-2 border-white animate-ping" />
+            <span className="absolute -top-1 right-0 h-3.5 w-3.5 rounded-full bg-emerald-500 border-2 border-white" />
+          </button>
+        </div>
+      )}
+
+      {/* AI Dietary Assistant Chat Window */}
+      {aiOpen && (
+        <div className="fixed bottom-24 right-6 z-50 w-full max-w-[360px] bg-cream border border-black/15 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-300 font-[family-name:var(--font-marketing)]">
+          {/* Header */}
+          <div className="bg-maroon p-4 text-maroon-foreground flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <div className="bg-white/10 p-1.5 rounded-lg">
+                <Sparkles className="h-4 w-4 text-maroon-foreground animate-spin-slow" />
+              </div>
+              <div>
+                <h3 className="font-bold text-xs">Kaizen Dietary AI</h3>
+                <span className="text-[9px] opacity-75 font-semibold">Llama 3.3 & Gemini</span>
+              </div>
+            </div>
+            <button
+              onClick={() => setAiOpen(false)}
+              className="text-maroon-foreground/70 hover:text-maroon-foreground cursor-pointer text-sm font-bold"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Messages */}
+          <div className="flex-1 p-4 space-y-3 overflow-y-auto max-h-[300px] bg-cream/40">
+            {aiMessages.map((msg, idx) => (
+              <div key={idx} className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}>
+                <div
+                  className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
+                    msg.sender === 'user'
+                      ? 'bg-maroon text-maroon-foreground rounded-tr-none'
+                      : 'bg-white text-cream-foreground border border-black/10 rounded-tl-none shadow-sm'
+                  }`}
+                >
+                  {msg.text}
+                </div>
+
+                {/* Suggestions layout inside message */}
+                {msg.suggestions && msg.suggestions.length > 0 && (
+                  <div className="w-full mt-2 space-y-2">
+                    <span className="text-[10px] text-cream-foreground/50 font-bold uppercase tracking-wider pl-1">
+                      Recommended Dishes:
+                    </span>
+                    {msg.suggestions.map((sug, sIdx) => (
+                      <div
+                        key={sIdx}
+                        className="bg-white border border-black/10 rounded-xl p-3 shadow-sm hover:border-maroon/30 transition-all flex justify-between items-center gap-2"
+                      >
+                        <div className="min-w-0">
+                          <h4 className="font-bold text-xs text-cream-foreground truncate">{sug.name}</h4>
+                          <p className="text-[10px] text-cream-foreground/60 leading-snug mt-0.5">{sug.reason}</p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            const nameSlug = sug.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+                            const el = document.getElementById(nameSlug)
+                            if (el) {
+                              el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                              el.classList.add('bg-maroon/5')
+                              setTimeout(() => el.classList.remove('bg-maroon/5'), 2000)
+                            } else {
+                              setSearchQuery(sug.name)
+                            }
+                          }}
+                          className="shrink-0 text-[10px] text-maroon font-bold hover:underline cursor-pointer"
+                        >
+                          View
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+            {aiLoading && (
+              <div className="flex items-center gap-1.5 pl-2 py-1">
+                <span className="h-1.5 w-1.5 bg-maroon rounded-full animate-bounce" />
+                <span className="h-1.5 w-1.5 bg-maroon rounded-full animate-bounce [animation-delay:0.2s]" />
+                <span className="h-1.5 w-1.5 bg-maroon rounded-full animate-bounce [animation-delay:0.4s]" />
+              </div>
+            )}
+          </div>
+
+          {/* Quick Prompts */}
+          <div className="px-4 py-2 border-t border-black/5 flex gap-1.5 overflow-x-auto bg-cream/10 shrink-0">
+            {['Vegan under ₹200', 'High-Protein Mains', 'Jain Starter'].map((txt) => (
+              <button
+                key={txt}
+                onClick={() => handleAiSubmit(txt)}
+                className="shrink-0 bg-white hover:bg-cream border border-black/10 text-[10px] font-bold text-cream-foreground px-2.5 py-1.5 rounded-full shadow-sm transition-all cursor-pointer"
+              >
+                {txt}
+              </button>
+            ))}
+          </div>
+
+          {/* Input Form */}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (!aiQuery.trim()) return
+              handleAiSubmit(aiQuery)
+            }}
+            className="p-3 border-t border-black/10 bg-white flex gap-2"
+          >
+            <input
+              type="text"
+              placeholder="Ask for high-protein, Jain..."
+              value={aiQuery}
+              onChange={(e) => setAiQuery(e.target.value)}
+              className="flex-1 bg-cream/30 border border-black/15 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-maroon text-cream-foreground placeholder-cream-foreground/40"
+              disabled={aiLoading}
+            />
+            <button
+              type="submit"
+              disabled={aiLoading || !aiQuery.trim()}
+              className="bg-maroon disabled:opacity-50 text-maroon-foreground hover:bg-maroon-hover px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer"
+            >
+              Ask
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   )
 }
 
-function MenuRow({ item, offer }: { item: MenuItemWithIngredients; offer: OfferRow | undefined }) {
+// ============================================================================
+// HELPERS & CONSTANTS
+// ============================================================================
+
+const INGREDIENT_NUTRITION: Record<string, { caloriesPerKg: number; proteinPerKg: number }> = {
+  'chicken': { caloriesPerKg: 1650, proteinPerKg: 310 },
+  'mutton': { caloriesPerKg: 2940, proteinPerKg: 250 },
+  'paneer': { caloriesPerKg: 3600, proteinPerKg: 180 },
+  'butter': { caloriesPerKg: 7170, proteinPerKg: 8 },
+  'rice': { caloriesPerKg: 3600, proteinPerKg: 70 },
+  'tomato': { caloriesPerKg: 180, proteinPerKg: 9 },
+  'onion': { caloriesPerKg: 400, proteinPerKg: 11 },
+  'ginger-garlic paste': { caloriesPerKg: 800, proteinPerKg: 20 },
+  'yogurt': { caloriesPerKg: 630, proteinPerKg: 35 },
+  'fresh cream': { caloriesPerKg: 3400, proteinPerKg: 20 },
+  'chickpeas': { caloriesPerKg: 3640, proteinPerKg: 190 },
+  'potato': { caloriesPerKg: 770, proteinPerKg: 20 },
+  'cauliflower': { caloriesPerKg: 250, proteinPerKg: 19 },
+  'spinach': { caloriesPerKg: 230, proteinPerKg: 29 },
+  'green peas': { caloriesPerKg: 810, proteinPerKg: 54 },
+  'red lentils': { caloriesPerKg: 3500, proteinPerKg: 240 },
+  'black lentils': { caloriesPerKg: 3400, proteinPerKg: 250 },
+  'ghee': { caloriesPerKg: 9000, proteinPerKg: 0 },
+  'sugar': { caloriesPerKg: 3870, proteinPerKg: 0 },
+  'milk': { caloriesPerKg: 600, proteinPerKg: 32 },
+  'tea leaves': { caloriesPerKg: 0, proteinPerKg: 0 },
+  'coffee powder': { caloriesPerKg: 0, proteinPerKg: 0 },
+  'mint leaves': { caloriesPerKg: 440, proteinPerKg: 30 },
+  'coriander leaves': { caloriesPerKg: 230, proteinPerKg: 21 },
+  'lemon': { caloriesPerKg: 300, proteinPerKg: 11 },
+  'semolina': { caloriesPerKg: 3600, proteinPerKg: 120 },
+  'mango pulp': { caloriesPerKg: 600, proteinPerKg: 5 },
+  'cashew nuts': { caloriesPerKg: 5530, proteinPerKg: 180 },
+  'chocolate sauce': { caloriesPerKg: 3400, proteinPerKg: 30 },
+  'vanilla essence': { caloriesPerKg: 2500, proteinPerKg: 0 },
+  'khoya': { caloriesPerKg: 3800, proteinPerKg: 150 },
+  'ice cream mix': { caloriesPerKg: 2000, proteinPerKg: 40 },
+  'butter naan flour': { caloriesPerKg: 2750, proteinPerKg: 80 },
+  'tomato soup mix': { caloriesPerKg: 2000, proteinPerKg: 40 }
+}
+
+function calculateNutrition(item: MenuItemWithIngredients) {
+  let calories = 0
+  let protein = 0
+  if (item.menu_item_ingredients && item.menu_item_ingredients.length > 0) {
+    for (const mii of item.menu_item_ingredients) {
+      const ingName = mii.ingredients?.name?.toLowerCase() || ''
+      const qty = Number(mii.qty_per_portion) || 0
+      const nut = INGREDIENT_NUTRITION[ingName]
+      if (nut) {
+        calories += qty * nut.caloriesPerKg
+        protein += qty * nut.proteinPerKg
+      }
+    }
+  }
+
+  if (calories === 0) {
+    const name = item.name.toLowerCase()
+    if (name.includes('chicken') || name.includes('mutton')) {
+      calories = 380
+      protein = 28
+    } else if (name.includes('paneer')) {
+      calories = 340
+      protein = 16
+    } else if (name.includes('dal') || name.includes('chana') || name.includes('biryani')) {
+      calories = 290
+      protein = 12
+    } else if (name.includes('naan') || name.includes('roti') || name.includes('kulcha')) {
+      calories = 210
+      protein = 5
+    } else if (name.includes('lassi') || name.includes('coffee') || name.includes('soda')) {
+      calories = 180
+      protein = 3
+    } else {
+      calories = 150
+      protein = 4
+    }
+  }
+
+  return {
+    calories: Math.round(calories),
+    protein: Math.round(protein),
+  }
+}
+
+function isVeg(name: string): boolean {
+  const nameLower = name.toLowerCase()
+  return !(
+    nameLower.includes('chicken') ||
+    nameLower.includes('mutton') ||
+    nameLower.includes('fish') ||
+    nameLower.includes('egg') ||
+    nameLower.includes('wing') ||
+    nameLower.includes('kebab') && !nameLower.includes('hara bhara')
+  )
+}
+
+function getPopularityScore(name: string): number {
+  const nameLower = name.toLowerCase()
+  if (nameLower.includes('butter chicken')) return 95
+  if (nameLower.includes('65')) return 90
+  if (nameLower.includes('palak paneer')) return 85
+  if (nameLower.includes('dal makhani')) return 80
+  if (nameLower.includes('garlic naan')) return 75
+  if (nameLower.includes('lassi')) return 70
+  if (nameLower.includes('rogan josh')) return 65
+  if (nameLower.includes('biryani')) return 60
+  if (nameLower.includes('spring roll')) return 55
+  if (nameLower.includes('hara bhara')) return 50
+  if (nameLower.includes('chilli paneer')) return 45
+  if (nameLower.includes('wings')) return 40
+  if (nameLower.includes('roti')) return 35
+  if (nameLower.includes('kulcha')) return 30
+  if (nameLower.includes('gulab jamun')) return 25
+  if (nameLower.includes('rasmalai')) return 20
+  if (nameLower.includes('kulfi')) return 15
+  if (nameLower.includes('brownie')) return 10
+  return 5
+}
+
+function MenuRow({ 
+  item, 
+  offer
+}: { 
+  item: MenuItemWithIngredients; 
+  offer: OfferRow | undefined;
+}) {
   const soldOut = isSoldOut(item)
   const finalPrice = offer ? Number(item.price) * (1 - Number(offer.discount_pct) / 100) : Number(item.price)
+  const { calories, protein } = calculateNutrition(item)
+  const isItemVeg = isVeg(item.name)
 
   return (
-    <div className={`flex gap-3.5 items-center py-3 border-b border-black/10 ${soldOut ? 'opacity-50' : ''}`}>
+    <div 
+      id={item.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')} 
+      className={`flex gap-3.5 items-center py-3 border-b border-black/10 transition-colors duration-500 rounded px-2 -mx-2 ${soldOut ? 'opacity-50' : ''}`}
+    >
       <div className="w-14 h-14 shrink-0 rounded-sm overflow-hidden bg-[#e2d9cb]">
         {item.image_url && (
           // eslint-disable-next-line @next/next/no-img-element
@@ -526,10 +1008,27 @@ function MenuRow({ item, offer }: { item: MenuItemWithIngredients; offer: OfferR
         {String(item.sort_order).padStart(2, '0')}
       </div>
       <div className="flex-1 min-w-0">
-        <div className="font-display text-sm text-cream-foreground tracking-[0.01em] truncate">{item.name}</div>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="font-display text-sm text-cream-foreground tracking-[0.01em] truncate">{item.name}</div>
+          <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full shrink-0 border ${
+            isItemVeg 
+              ? 'border-emerald-600/30 bg-emerald-50 text-emerald-700' 
+              : 'border-rose-600/30 bg-rose-50 text-rose-700'
+          }`}>
+            {isItemVeg ? 'VEG🟢' : 'NON-VEG🔴'}
+          </span>
+        </div>
         {item.description && (
           <div className="text-xs leading-snug text-cream-foreground/55 mt-0.5">{item.description}</div>
         )}
+
+        {/* Nutritional Info Displayed Unconditionally */}
+        <div className="text-[10px] text-cream-foreground/50 mt-1 font-semibold flex gap-2 items-center">
+          <span>🔥 {calories} kcal</span>
+          <span className="opacity-30">|</span>
+          <span>💪 {protein}g protein</span>
+        </div>
+
         <div className="flex items-baseline gap-2 mt-1">
           <span className="text-xs font-bold text-cream-foreground">₹{finalPrice}</span>
           {offer && <span className="text-[10px] line-through text-cream-foreground/40">₹{item.price}</span>}

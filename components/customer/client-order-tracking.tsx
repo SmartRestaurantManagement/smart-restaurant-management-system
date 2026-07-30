@@ -172,36 +172,38 @@ export function ClientOrderTracking({
         </Badge>
       </div>
 
-      {/* Split Bill Prompt Banner */}
+      {/* Split Bill Pop-up Modal */}
       {showSplitPrompt && sessionId && (
-        <Card className="border border-amber-200 bg-amber-50/40 shadow-sm rounded-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
-          <CardContent className="p-4 flex items-center justify-between gap-4">
-            <div className="flex gap-3">
-              <Receipt className="h-5 w-5 text-amber-600 shrink-0 mt-0.5 animate-pulse" />
-              <div className="text-xs text-neutral-700">
-                <span className="font-bold block text-neutral-850">Split the Bill Now?</span>
-                <p className="mt-0.5 text-neutral-500">Would you like to split the bill with your dining group immediately?</p>
-              </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-300 font-[family-name:var(--font-marketing)]">
+          <div className="bg-white border border-neutral-200 rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-5 text-center animate-in zoom-in-95 duration-200">
+            <div className="mx-auto bg-amber-50 h-14 w-14 rounded-full flex items-center justify-center border border-amber-100 shadow-inner">
+              <Receipt className="h-7 w-7 text-amber-600" />
             </div>
-            <div className="flex gap-2 shrink-0">
+            
+            <div className="space-y-2">
+              <h3 className="text-lg font-black text-neutral-900">Split the Bill?</h3>
+              <p className="text-xs text-neutral-500 leading-relaxed px-2">
+                Your order is confirmed! Would you like to split the bill (₹{total}) with your dining group right away?
+              </p>
+            </div>
+
+            <div className="flex gap-3 pt-2">
               <Button
-                size="sm"
-                variant="ghost"
+                variant="outline"
                 onClick={() => setShowSplitPrompt(false)}
-                className="text-neutral-450 hover:text-neutral-700 font-semibold text-xxs px-2 py-1"
+                className="flex-1 border-neutral-300 text-neutral-600 hover:bg-neutral-50 font-bold text-xs py-2.5 rounded-2xl cursor-pointer"
               >
-                Dismiss
+                Maybe Later
               </Button>
               <Button
-                size="sm"
                 onClick={() => router.push(`/group/${sessionId}`)}
-                className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xxs px-3 py-1.5 rounded-xl shadow-md cursor-pointer"
+                className="flex-1 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs py-2.5 rounded-2xl shadow-md cursor-pointer"
               >
                 Split Now
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Dynamic Wait Time & Stepper */}

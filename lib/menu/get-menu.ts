@@ -1,5 +1,12 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
+import { unstable_cache } from 'next/cache'
 import type { Database } from '@/types/database'
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+
+// Avoid reading headers or cookies to make fetching static-friendly and cacheable
+const publicSupabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
 
 type MenuItem = Database['public']['Tables']['menu_items']['Row']
 type MenuCategory = Database['public']['Tables']['menu_categories']['Row']
@@ -16,10 +23,8 @@ export type CategoryWithItems = MenuCategory & {
   menu_items: MenuItemWithIngredients[]
 }
 
-export async function getMenu(): Promise<CategoryWithItems[]> {
-  const supabase = await createClient()
-
-  const { data, error } = await supabase
+async function fetchMenuRaw(): Promise<CategoryWithItems[]> {
+  const { data, error } = await publicSupabase
     .from('menu_categories')
     .select(`
       *,
@@ -43,3 +48,12 @@ export async function getMenu(): Promise<CategoryWithItems[]> {
 
   return data as any as CategoryWithItems[]
 }
+
+// Caches the menu structure for 10 seconds to drastically reduce database overhead and speed up page rendering
+export const getMenu = unstable_cache(
+  async () => {
+    return fetchMenuRaw()
+  },
+  ['menu-categories-and-items-v1'],
+  { revalidate: 10, tags: ['menu'] }
+)
