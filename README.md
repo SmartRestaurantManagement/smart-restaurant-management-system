@@ -17,73 +17,86 @@ Use the following credentials to access the system during local testing and vali
 
 ---
 
-## ⚡ Core Features
+# ⚡ Core Features
 
-### 1. 👥 Real-Time Group Ordering
-* **PostgreSQL Realtime Sync**: Guests at the same table can initiate a shared group ordering session. Multiple devices can scan the table QR code and add items to a shared basket.
-* **Instant Synchronization**: Cart changes, seat allocations, and item counts update instantly on all connected devices via Supabase Realtime Channels.
-
-### 2. 🧠 AI-Powered Allergen Safety Guard
-* **Recipe Check**: Customers can declare food allergies (e.g., *Dairy, Gluten, Peanuts, Soy*). The system performs an intersection check against the dish's raw ingredient profiles.
-* **AI Alternatives**: If a conflict is found, the checkout is dynamically blocked, and a generative AI engine (using **Groq Llama-3.3** with a **Gemini 2.0** fallback) provides a polite explanation of the allergen conflict and suggests safe, relevant menu substitutes.
-
-### 3. 🌦️ Weather-Integrated Demand Forecasting
-* **Open-Meteo API**: Automatically retrieves live weather predictions for tomorrow.
-* **Smart Baselines**: Classifies items (e.g., warm/comfort food like *Dal Makhani* vs. cold items like *Mango Lassi*) and predicts inventory needs based on weather parameters (rain, temperature highs, heat index).
-* **Smart Offers & Dynamic Pricing**: If the system detects tomorrow's demand is low or an item is in excess stock risk, it automatically suggests dynamic discounts to accelerate sales.
-
-### 4. 📊 Business Intelligence & Menu Engineering
-* **Menu Engineering Matrix**: Automatically groups menu items based on profitability and popularity into:
-  * **Stars**: High popularity, high margin (maintain quality and feature prominently).
-  * **Plowhorses**: High popularity, low margin (re-price or bundle).
-  * **Puzzles**: Low popularity, high margin (promote heavily).
-  * **Dogs**: Low popularity, low margin (consider removing).
-* **Food Waste Avoided Counter**: Generates a value metric showing the cost of ingredients saved from spoilage thanks to dynamically cleared smart-discount sales.
-
-### 5. ⏱️ Self-Calibrating Kitchen ETA & Alerts
-* **Predictive Wait Times**: Predicts actual wait times dynamically based on active order queues, kitchen capacities, and historical food preparation data.
-* **Instant Guest Services**: Guests can request service (e.g., extra napkins, water, check/bill) directly from their order-tracking screen, ringing up instantly on the staff dashboard.
+### 1. 🧠 AI-Powered Allergen Safety Guard
+- **Personalized Allergy Detection:** Customers can declare allergies (e.g., Dairy, Gluten, Peanuts, Soy), and every dish is automatically checked against its recipe ingredients.
+- **AI-Powered Safe Alternatives:** If an allergen conflict is detected, checkout is blocked and AI (Groq Llama-3.3 with Gemini 2.0 fallback) explains the issue while recommending safe menu alternatives.
 
 ---
 
-## 🌟 Unique Features & Layout Refinements
+### 2. 🌦️ Weather-Aware Demand Forecasting & Smart Offers
+- **AI Demand Forecasting:** Combines historical order trends with live weather forecasts from the **Open-Meteo API** to predict next-day demand and identify potential overstock.
+- **Smart Discount Recommendations:** Automatically suggests margin-safe discounts for low-demand dishes to reduce ingredient waste while maintaining profitability.
+- **Human Approval Workflow:** All generated Smart Offers require staff approval before appearing on the customer menu.
 
-### 1. 🤖 AI-Powered Interactive Dietary Assistant
-* **Floating Chat Panel**: An elegant sparks-badged chat panel that allows customers to specify dietary criteria in plain language (e.g. *"something high-protein and Jain under ₹300"*) and they can also ask what goes with what ( e.g. What should I order with paneer tikka?)
-* **Grounded Recommendations**: Suggestions query the LLM engine grounded on active menu items. Recommends dish items with clear reasoning.
-* **Auto-Scroll & Highlight**: Clicking **"View"** on any recommended item inside the chat logs automatically scrolls the main menu page directly to the target dish card and highlights it.
+---
 
-### 2. 🥗 Default & Unconditional Nutritional Info
-* **Portion-Wise Analytics**: Approximate calories and protein content are computed dynamically from recipe ingredients (e.g., *🔥 688 kcal | 💪 33g protein* for Chilli Paneer) using realistic food coefficient weights.
-* **Default Display**: Nutritional metrics are displayed by default under every single dish name/description unconditionally, removing the need for customers to toggle it manually.
+### 3. 📊 Business Intelligence Dashboard
+- **Menu Engineering Matrix:** Automatically classifies menu items into **Stars, Plowhorses, Puzzles,** and **Dogs** based on popularity and profitability to support pricing and marketing decisions.
+- **Waste Savings Analytics:** Tracks estimated food waste prevented and ingredient costs saved through AI-driven Smart Offers.
 
-### 3. 🏷️ AI Weather-Driven Smart Offers
-- **AI-Powered Demand Forecasting:** Combines historical order patterns with real-time weather data from the **Open-Meteo API** to predict next-day demand and generate actionable AI insights.
-- **Intelligent Discount Recommendations:** Detects overstock risks and suggests margin-safe, limited-time discounts to reduce ingredient waste while maintaining profitability.
-- **Premium Smart Offer Banner:** Displays staff-approved Smart Offers prominently on the landing and menu pages with a premium banner and one-click **Add to Cart** for faster conversions.
+---
 
-### 4. 🛑 Seated Table Checkout Constraints
-* **Checkout Blocks**: Cart checkouts and orders are blocked unless the customer has selected a table, preventing orphan orders from reaching the kitchen.
-* **Alert Banners**: A prompt warning is displayed at checkout advising the customer to join a table from the menu page first.
-* **Table Service Lock**: The "Call Service" widget is locked and prompts the user to join a table so staff knows exactly where to bring services.
+### 4. ⏱️ Intelligent Kitchen ETA
+- **Dynamic Wait Time Prediction:** Continuously estimates order preparation times using active kitchen workload, historical preparation data, and live order queues.
+- **Real-Time Order Tracking:** Keeps customers informed with accurate preparation progress and updated delivery estimates.
 
-### 5. 💳 One-Click Bill Splitting
-- **Seamless Group Payments:** Opens a dedicated post-checkout modal where users can view the total amount and effortlessly split the bill among friends with an intuitive interface.
+---
 
-### 6. 🚀 Sub-50ms Menu Caching (`unstable_cache`)
-* **Static Database Querying**: Restructured database menu requests to execute through a public anon client that bypasses reading session cookies.
-* **High-Speed Cache**: Wrapped requests in Next.js `unstable_cache` with a 10s revalidation window, reducing the main page response times to sub-50ms for a snappy user experience.
+### 5. 🪑 Smart Table Management
+- **Mandatory Table Association:** Orders can only be placed after joining a table, preventing orphan orders from reaching the kitchen.
+- **Context-Aware Service:** Table-specific ordering and service requests ensure staff always know where assistance is required.
 
-### 7. 📲 Mobile UI Optimizations
-* **Mobile Scaling**: Removed scrolling tickers and layout strips that caused visual wrapping bugs on mobile screens, aligning layout elements for phone size viewports.
-* **Anti-Infinite Render Fix**: Implemented stable `useMemo` hooks for Supabase clients and `useEffect` lifecycle mounts (active flag hooks) on staff order, catalog, and request pages, preventing infinite react rendering loops and browser hangs.
-  
-### 8. 🔍 Intelligent Menu Explorer
-- **Smart Search & Filtering:** Enables customers to discover dishes effortlessly with live search, price filters, Veg/Non-Veg categories, and dynamic sorting by **Price** or **Popularity (Most Ordered)** for a personalized ordering experience.
+---
 
-### 9. 🔔 Real-Time Table Service Requests
-- **Instant Service Assistance:** Customers can request **Drinking Water**, **Call a Server**, or **Request the Bill** directly from the digital menu through a dedicated service modal.
-- **Live Staff Dashboard Alerts:** Every request appears instantly on the staff dashboard with a real-time response timer. Requests that exceed the acceptable response time are automatically highlighted in **red**, enabling staff to prioritize delayed tables and ensure faster service.
+### 6. 💳 Smart Bill Splitting
+- **Seamless Group Payments:** Split the final bill among multiple diners through a dedicated post-checkout modal for a faster payment experience.
+
+---
+
+# 🌟 Customer Experience
+
+### 1. 🤖 Ask Kaizen — AI Dining Assistant
+- **Natural Language Recommendations:** Customers can ask for dishes based on dietary preferences, budget, nutrition goals, or cuisine (e.g., *"High-protein Jain meal under ₹300"*).
+- **Smart Pairing Suggestions:** Recommends complementary dishes and beverages while explaining the reasoning behind each suggestion.
+- **Interactive Navigation:** Selecting a recommendation automatically scrolls to and highlights the corresponding menu item.
+
+---
+
+### 2. 🥗 Automatic Nutritional Insights
+- **Ingredient-Based Nutrition Analysis:** Calculates approximate calories and protein directly from recipe ingredients.
+- **Always Visible:** Nutritional information is displayed beneath every menu item without requiring user interaction.
+
+---
+
+### 3. 🏷️ AI Smart Offer Experience
+- **Premium Offer Banner:** Displays staff-approved AI Smart Offers prominently on the landing and menu pages.
+- **One-Click Ordering:** Customers can instantly add discounted dishes to their cart directly from the Smart Offer banner.
+
+---
+
+### 4. 🔍 Intelligent Menu Explorer
+- **Advanced Discovery:** Browse dishes using live search, Veg/Non-Veg filters, price filters, and sorting by price or popularity for a personalized ordering experience.
+
+---
+
+### 5. 🔔 Real-Time Table Service Requests
+- **Instant Service Requests:** Customers can request **Water**, **Call a Server**, or **Request the Bill** directly from the menu.
+- **Smart Staff Alerts:** Requests appear instantly on the staff dashboard with a live response timer. Delayed requests automatically turn **red**, helping staff prioritize tables requiring immediate attention.
+
+---
+
+# 🚀 Performance & Optimization
+
+### 1. ⚡ High-Speed Menu Caching
+- **Sub-50ms Menu Loading:** Uses Next.js `unstable_cache` with optimized public database queries to deliver fast and responsive menu browsing.
+
+---
+
+### 2. 📲 Mobile-First Experience
+- **Responsive Design:** Optimized layouts and components for seamless usage across mobile, tablet, and desktop devices.
+- **Performance Improvements:** Eliminated unnecessary re-renders using optimized React hooks, resulting in a smoother and more stable user experience.
 
 ---
 
