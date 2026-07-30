@@ -25,7 +25,14 @@ export default function ServiceRequestsDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [resolvingId, setResolvingId] = useState<string | null>(null)
+  const [dismissedAlertIds, setDismissedAlertIds] = useState<string[]>([])
   
+  // Prune dismissed IDs when requests list changes
+  useEffect(() => {
+    const requestIds = requests.map((r) => r.id)
+    setDismissedAlertIds((prev) => prev.filter((id) => requestIds.includes(id)))
+  }, [requests])
+
   // Timer state to force component re-renders every second for the SLA clocks
   const [time, setTime] = useState(Date.now())
 
@@ -144,21 +151,22 @@ export default function ServiceRequestsDashboard() {
     let colorClass = 'text-emerald-600 bg-emerald-50 border-emerald-200'
     let textLabel = 'Normal SLA'
 
-    if (elapsedSeconds >= 300) {
-      // Red: > 5 minutes
-      colorClass = 'text-red-600 bg-red-50 border-red-200 animate-pulse'
-      textLabel = 'CRITICAL SLA'
-    } else if (elapsedSeconds >= 120) {
-      // Amber: 2 to 5 minutes
+    if (elapsedSeconds >= 120) {
+      // Amber: 2 to 5+ minutes (does not turn red now)
       colorClass = 'text-amber-600 bg-amber-50 border-amber-200'
-      textLabel = 'Warning SLA'
+      textLabel = elapsedSeconds >= 300 ? 'Critical SLA' : 'Warning SLA'
     }
 
     return { formatted, colorClass, textLabel }
   }
 
+  const criticalAlerts = requests.filter((req) => {
+    const elapsedSeconds = Math.floor((Date.now() - new Date(req.requested_at).getTime()) / 1000)
+    return elapsedSeconds >= 300 && !dismissedAlertIds.includes(req.id)
+  })
+
   return (
-    <div className="flex flex-col gap-6 max-w-4xl mx-auto">
+    <div className="flex flex-col gap-6 max-w-4xl mx-auto relative">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-neutral-800">Table Service Requests</h1>
         <p className="text-xs text-neutral-500 mt-1">
@@ -224,6 +232,70 @@ export default function ServiceRequestsDashboard() {
               </Card>
             )
           })}
+        </div>
+      )}
+
+      {/* SLA Alert Modal Overlay */}
+      {criticalAlerts.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl border border-red-200 shadow-2xl p-6 max-w-md w-full relative overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Pulsing red accent line at the top */}
+            <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-red-600 via-rose-500 to-red-600 animate-pulse" />
+            
+            <div className="flex flex-col items-center text-center">
+              <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mb-4 text-red-600 animate-bounce">
+                <Clock className="h-7 w-7 animate-pulse" />
+              </div>
+              <h3 className="text-lg font-bold text-neutral-800 uppercase tracking-wide">
+                Critical SLA Breach!
+              </h3>
+              <p className="text-xs text-neutral-500 mt-1">
+                The following table service requests have exceeded 5 minutes and require immediate attention:
+              </p>
+            </div>
+
+            <div className="mt-4 space-y-2 max-h-[220px] overflow-y-auto pr-1">
+              {criticalAlerts.map((req) => {
+                const elapsedSeconds = Math.floor((Date.now() - new Date(req.requested_at).getTime()) / 1000)
+                const mins = Math.floor(elapsedSeconds / 60)
+                const secs = elapsedSeconds % 60
+                const formatted = `${mins}m ${secs}s`
+                const typeLabel = req.type === 'bill' ? 'Request Bill' : req.type === 'water' ? 'Need Water' : 'Call Server'
+
+                return (
+                  <div key={req.id} className="p-3 bg-red-50/50 rounded-xl border border-red-100 flex items-center justify-between gap-3 text-xs">
+                    <div>
+                      <p className="font-bold text-neutral-800">Table {req.table?.table_number ?? '—'}</p>
+                      <p className="text-xxs text-neutral-400 capitalize">{typeLabel} • {formatted} ago</p>
+                    </div>
+                    <Button
+                      size="sm"
+                      disabled={resolvingId === req.id}
+                      onClick={async () => {
+                        await handleResolve(req.id)
+                      }}
+                      className="bg-red-600 hover:bg-red-700 text-white font-bold px-2.5 py-1 rounded-lg text-xxs shrink-0"
+                    >
+                      Resolve
+                    </Button>
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="flex flex-col gap-2 mt-6">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  const currentCriticalIds = criticalAlerts.map((r) => r.id)
+                  setDismissedAlertIds((prev) => [...prev, ...currentCriticalIds])
+                }}
+                className="text-neutral-500 hover:text-neutral-700 font-semibold text-xs py-2 rounded-xl"
+              >
+                Dismiss Alert
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

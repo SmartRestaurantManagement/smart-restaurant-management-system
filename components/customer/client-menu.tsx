@@ -58,7 +58,7 @@ export function ClientMenu({ initialCategories }: Props) {
   const [aiQuery, setAiQuery] = useState('')
   const [aiLoading, setAiLoading] = useState(false)
   const [aiMessages, setAiMessages] = useState<Array<{ sender: 'user' | 'ai'; text: string; suggestions?: Array<{ name: string; reason: string }> }>>([
-    { sender: 'ai', text: "Hello! I'm your Kaizen Dietary Assistant. Describe what you're craving or any dietary restrictions (Jain, Vegan, Gluten-Free, High-Protein, etc.), and I'll find the perfect dishes for you!" }
+    { sender: 'ai', text: "Hello! I'm Ask Kaizen, your dietary assistant. Describe what you're craving or any dietary restrictions (Jain, Vegan, Gluten-Free, High-Protein, etc.), and I'll find the perfect dishes for you!" }
   ])
 
   const supabase = useMemo(() => createClient(), [])
@@ -726,10 +726,11 @@ export function ClientMenu({ initialCategories }: Props) {
         <div className="fixed bottom-6 right-6 z-40">
           <button
             onClick={() => setAiOpen(!aiOpen)}
-            className="bg-maroon text-maroon-foreground hover:bg-maroon-hover p-4 rounded-full shadow-2xl transition-all duration-300 hover:scale-110 flex items-center justify-center cursor-pointer border border-maroon/20 group relative"
-            title="Dietary Assistant"
+            className="bg-maroon text-white hover:bg-maroon-hover px-5 py-4 rounded-full shadow-2xl transition-all duration-300 hover:scale-110 flex items-center justify-center gap-2 cursor-pointer border border-maroon/20 group relative font-semibold text-xs tracking-wider"
+            title="Ask Kaizen"
           >
-            <Sparkles className="h-6 w-6 animate-pulse" />
+            <Sparkles className="h-5 w-5 animate-pulse text-white shrink-0" />
+            <span className="text-white font-semibold text-xs tracking-wider uppercase">Ask Kaizen</span>
             <span className="absolute -top-1 right-0 h-3.5 w-3.5 rounded-full bg-emerald-500 border-2 border-white animate-ping" />
             <span className="absolute -top-1 right-0 h-3.5 w-3.5 rounded-full bg-emerald-500 border-2 border-white" />
           </button>
@@ -746,7 +747,7 @@ export function ClientMenu({ initialCategories }: Props) {
                 <Sparkles className="h-4 w-4 text-maroon-foreground animate-spin-slow" />
               </div>
               <div>
-                <h3 className="font-bold text-xs">Kaizen Dietary AI</h3>
+                <h3 className="font-bold text-xs">Ask Kaizen</h3>
                 <span className="text-[9px] opacity-75 font-semibold">Llama 3.3 & Gemini</span>
               </div>
             </div>
