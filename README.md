@@ -48,6 +48,9 @@ Use the following credentials to access the system during local testing and vali
 - **Mandatory Table Association:** Orders can only be placed after joining a table, preventing orphan orders from reaching the kitchen.
 - **Context-Aware Service:** Table-specific ordering and service requests ensure staff always know where assistance is required.
 
+### 6. 💳 Smart Bill Splitting
+- **Seamless Group Payments:** Split the final bill among multiple diners through a dedicated post-checkout modal for a faster payment experience.
+
 ---
 
 # 🌟 Customer Experience
@@ -79,11 +82,6 @@ Use the following credentials to access the system during local testing and vali
 ### 5. 🔔 Real-Time Table Service Requests
 - **Instant Service Requests:** Customers can request **Water**, **Call a Server**, or **Request the Bill** directly from the menu.
 - **Smart Staff Alerts:** Requests appear instantly on the staff dashboard with a live response timer. Delayed requests automatically turn **red**, helping staff prioritize tables requiring immediate attention.
-
----
-
-### 6. 💳 Smart Bill Splitting
-- **Seamless Group Payments:** Split the final bill among multiple diners through a dedicated post-checkout modal for a faster payment experience.
 
 ---
 
