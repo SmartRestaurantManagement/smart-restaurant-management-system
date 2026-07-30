@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { getAuthErrorMessage } from '@/lib/auth/get-auth-error-message'
@@ -15,6 +15,14 @@ export default function SignupPage() {
 
   const router = useRouter()
   const supabase = createClient()
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const message = params.get('message')
+    if (params.get('error') === 'verification-failed' && message) {
+      setError(message)
+    }
+  }, [])
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()

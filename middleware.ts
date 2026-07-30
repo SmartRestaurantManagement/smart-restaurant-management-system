@@ -4,6 +4,18 @@ import { NextResponse, type NextRequest } from 'next/server'
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
+  // Supabase falls back to the project's Site URL (which is "/") when the
+  // OAuth redirectTo isn't on the Redirect URLs allow-list, but still
+  // appends the auth code. Forward it to /auth/confirm so the exchange
+  // that route already does can still complete instead of stranding the
+  // user on the landing page.
+  const oauthCode = request.nextUrl.searchParams.get('code')
+  if (pathname === '/' && oauthCode) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/auth/confirm'
+    return NextResponse.redirect(url)
+  }
+
   // Allow public authentication paths and static/API paths
   const publicPaths = ['/signup', '/verify-otp', '/auth/confirm']
   const isPublicPath = publicPaths.some(path => pathname.startsWith(path))

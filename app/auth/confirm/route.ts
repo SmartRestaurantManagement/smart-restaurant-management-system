@@ -9,6 +9,8 @@ export async function GET(request: Request) {
   const code = searchParams.get('code')
   const next = searchParams.get('next') ?? '/menu'
 
+  let failureMessage = 'No verification code or token was provided.'
+
   if (token_hash && type) {
     const supabase = await createClient()
     const { error } = await supabase.auth.verifyOtp({
@@ -18,14 +20,21 @@ export async function GET(request: Request) {
     if (!error) {
       return NextResponse.redirect(new URL(next, request.url))
     }
+    failureMessage = error.message
   } else if (code) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
       return NextResponse.redirect(new URL(next, request.url))
     }
+    failureMessage = error.message
   }
 
+  console.error('[auth/confirm] verification failed:', failureMessage)
+
   // Redirect to signup page with error query parameter if verification fails
-  return NextResponse.redirect(new URL('/signup?error=verification-failed', request.url))
+  const failureUrl = new URL('/signup', request.url)
+  failureUrl.searchParams.set('error', 'verification-failed')
+  failureUrl.searchParams.set('message', failureMessage)
+  return NextResponse.redirect(failureUrl)
 }
