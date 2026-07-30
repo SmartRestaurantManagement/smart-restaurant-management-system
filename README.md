@@ -48,6 +48,8 @@ Use the following credentials to access the system during local testing and vali
 - **Mandatory Table Association:** Orders can only be placed after joining a table, preventing orphan orders from reaching the kitchen.
 - **Context-Aware Service:** Table-specific ordering and service requests ensure staff always know where assistance is required.
 
+---
+
 ### 6. 💳 Smart Bill Splitting
 - **Seamless Group Payments:** Split the final bill among multiple diners through a dedicated post-checkout modal for a faster payment experience.
 
