@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { getCallerRestaurantId } from '@/lib/api/restaurant'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -15,33 +15,24 @@ interface CustomerProfile {
 }
 
 export default function CustomersDashboardPage() {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const [customers, setCustomers] = useState<CustomerProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    async function loadCustomers() {
-      setLoading(true)
-      
-      let rid = await getCallerRestaurantId(supabase)
-      if (!rid) {
-        const { data } = await supabase.from('restaurants').select('id').limit(1).single()
-        rid = data?.id || null
-      }
+    let active = true
+    let channel: ReturnType<typeof supabase.channel> | null = null
 
-      if (!rid) {
-        setError("Could not resolve restaurant ID.")
-        setLoading(false)
-        return
-      }
-
+    async function loadCustomers(rid: string) {
       const { data, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('restaurant_id', rid)
         .eq('role', 'customer')
         .order('full_name')
+
+      if (!active) return
 
       if (profileError) {
         setError(profileError.message)
@@ -51,7 +42,51 @@ export default function CustomersDashboardPage() {
       setLoading(false)
     }
 
-    loadCustomers()
+    (async () => {
+      setLoading(true)
+      let rid = await getCallerRestaurantId(supabase)
+      if (!rid) {
+        const { data } = await supabase.from('restaurants').select('id').limit(1).single()
+        rid = data?.id || null
+      }
+
+      if (!active) return
+
+      if (!rid) {
+        setError("Could not resolve restaurant ID.")
+        setLoading(false)
+        return
+      }
+
+      await loadCustomers(rid)
+
+      const chan = supabase
+        .channel('customers-realtime')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'profiles',
+            filter: `restaurant_id=eq.${rid}`
+          },
+          () => {
+            void loadCustomers(rid)
+          }
+        )
+
+      channel = chan
+      if (active) {
+        chan.subscribe()
+      }
+    })()
+
+    return () => {
+      active = false
+      if (channel) {
+        supabase.removeChannel(channel)
+      }
+    }
   }, [supabase])
 
   return (

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { getCallerRestaurantId } from '@/lib/api/restaurant'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -19,7 +19,7 @@ interface ServiceRequestRow {
 }
 
 export default function ServiceRequestsDashboard() {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const [restaurantId, setRestaurantId] = useState<string | null>(null)
   const [requests, setRequests] = useState<ServiceRequestRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -48,7 +48,7 @@ export default function ServiceRequestsDashboard() {
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null
-    let active = true
+    let active = true;
 
     (async () => {
       setLoading(true)

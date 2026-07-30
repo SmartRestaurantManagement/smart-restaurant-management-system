@@ -546,26 +546,27 @@ export function ClientMenu({ initialCategories }: Props) {
           </div>
         </div>
 
-        {/* Floating smart offer banner */}
+        {/* Floating Smart Offer Notification */}
         {featuredItem && featuredOffer && (
-          <div className="bg-white border border-maroon/20 rounded-2xl p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
-            <div className="flex items-center gap-4">
-              <div className="bg-maroon/10 p-3 rounded-xl">
-                <Sparkles className="h-5 w-5 text-maroon" />
+          <div className="bg-gradient-to-r from-red-950/80 via-amber-950/40 to-charcoal border border-red-900/40 text-white rounded-3xl p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-2xl relative overflow-hidden mb-6">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 rounded-full blur-2xl pointer-events-none" />
+            <div className="flex items-center gap-4 relative z-10">
+              <div className="bg-amber-500/10 p-3 rounded-2xl border border-amber-500/20">
+                <Sparkles className="h-6 w-6 text-amber-400 animate-pulse" />
               </div>
               <div>
-                <span className="text-[10px] bg-maroon/10 text-maroon px-2.5 py-0.5 rounded-full font-bold uppercase tracking-widest">
-                  Limited Offer
+                <span className="text-[10px] bg-red-900/50 text-red-300 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-widest border border-red-500/20">
+                  Flash Smart Offer
                 </span>
-                <h4 className="font-bold text-sm mt-1.5 text-cream-foreground">
+                <h4 className="font-extrabold text-lg mt-1.5 text-white">
                   Save {Math.round(Number(featuredOffer.discount_pct))}% on {featuredItem.name}!
                 </h4>
               </div>
             </div>
-            <div className="flex items-center gap-4 shrink-0 w-full md:w-auto justify-between md:justify-end">
+            <div className="flex items-center gap-4 shrink-0 w-full md:w-auto justify-between md:justify-end relative z-10">
               <div className="text-right">
-                <span className="line-through text-xs text-cream-foreground/40">₹{featuredItem.price}</span>
-                <p className="font-bold text-lg text-maroon">
+                <span className="line-through text-xs text-white/40">₹{featuredItem.price}</span>
+                <p className="font-bold text-lg text-amber-400">
                   ₹{Math.round(Number(featuredItem.price) * (1 - Number(featuredOffer.discount_pct) / 100))}
                 </p>
               </div>

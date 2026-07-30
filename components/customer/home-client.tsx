@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Coffee } from "lucide-react";
+import { Coffee, Sparkles } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { AddToCartButton } from "./add-to-cart-button";
 
 export type Special = { num: string; name: string; desc: string; url: string };
 export type CategoryTile = { name: string; href: string; url: string };
@@ -11,6 +12,8 @@ type Props = {
   specials: Special[];
   categoryTiles: CategoryTile[];
   heroImages: string[];
+  featuredItem?: { id: string; name: string; price: number } | null;
+  featuredOffer?: { discount_pct: number } | null;
 };
 
 const TICKER = [
@@ -72,7 +75,7 @@ const NAV_LINKS = [
   { href: "#specials", label: "SPECIALS" },
 ];
 
-export function HomeClient({ specials, categoryTiles, heroImages }: Props) {
+export function HomeClient({ specials, categoryTiles, heroImages, featuredItem, featuredOffer }: Props) {
   const heroPhoto = heroImages[0];
 
   return (
@@ -184,7 +187,40 @@ export function HomeClient({ specials, categoryTiles, heroImages }: Props) {
           </div>
         </section>
 
-
+      {/* Floating Smart Offer Notification */}
+      {featuredItem && featuredOffer && (
+        <div className="max-w-[1200px] mx-auto px-6 md:px-12 pt-8">
+          <div className="bg-gradient-to-r from-red-950/80 via-amber-950/40 to-charcoal border border-red-900/40 text-white rounded-3xl p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 rounded-full blur-2xl pointer-events-none" />
+            <div className="flex items-center gap-4 relative z-10">
+              <div className="bg-amber-500/10 p-3 rounded-2xl border border-amber-500/20">
+                <Sparkles className="h-6 w-6 text-amber-400 animate-pulse" />
+              </div>
+              <div>
+                <span className="text-[10px] bg-red-900/50 text-red-300 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-widest border border-red-500/20">
+                  Flash Smart Offer
+                </span>
+                <h4 className="font-extrabold text-lg mt-1.5 text-white">
+                  Save {Math.round(featuredOffer.discount_pct)}% on {featuredItem.name}!
+                </h4>
+              </div>
+            </div>
+            <div className="flex items-center gap-4 shrink-0 w-full md:w-auto justify-between md:justify-end relative z-10">
+              <div className="text-right">
+                <span className="line-through text-xs text-white/40">₹{featuredItem.price}</span>
+                <p className="font-bold text-lg text-amber-400">
+                  ₹{Math.round(featuredItem.price * (1 - featuredOffer.discount_pct / 100))}
+                </p>
+              </div>
+              <AddToCartButton
+                menuItemId={featuredItem.id}
+                name={featuredItem.name}
+                price={featuredItem.price * (1 - featuredOffer.discount_pct / 100)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Best Picks */}
       {specials.length > 0 && (

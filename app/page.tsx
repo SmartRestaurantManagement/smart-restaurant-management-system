@@ -1,5 +1,6 @@
 import { getMenu } from "@/lib/menu/get-menu";
 import { HomeClient, type Special, type CategoryTile } from "@/components/customer/home-client";
+import { createClient } from "@/lib/supabase/server";
 
 const SPECIAL_NAMES = ["Butter Chicken", "Mutton Rogan Josh", "Vegetable Biryani", "Rasmalai"];
 
@@ -10,6 +11,18 @@ function slugify(name: string) {
 export default async function LandingPage() {
   const categories = await getMenu();
   const allItems = categories.flatMap((c) => c.menu_items.filter((i) => i.is_available));
+
+  const supabase = await createClient();
+  const { data: offers } = await supabase
+    .from("offers")
+    .select("*")
+    .eq("active", true)
+    .or("expires_at.is.null,expires_at.gt." + new Date().toISOString());
+
+  const featuredOffer = offers && offers.length > 0 ? offers[0] : null;
+  const featuredItem = featuredOffer
+    ? allItems.find((item) => item.id === featuredOffer.menu_item_id)
+    : null;
 
   const specials: Special[] = SPECIAL_NAMES.map((name, i) => {
     const item = allItems.find((it) => it.name === name);
@@ -42,6 +55,8 @@ export default async function LandingPage() {
       specials={specials}
       categoryTiles={categoryTiles}
       heroImages={heroImages.length ? heroImages : specials.map((s) => s.url)}
+      featuredItem={featuredItem ? { id: featuredItem.id, name: featuredItem.name, price: Number(featuredItem.price) } : null}
+      featuredOffer={featuredOffer ? { discount_pct: Number(featuredOffer.discount_pct) } : null}
     />
   );
 }

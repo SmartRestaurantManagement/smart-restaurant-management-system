@@ -244,6 +244,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Failed to seed recipes: " + recipeError.message }, { status: 500 });
     }
 
+    // Seed a default active smart offer for Paneer Butter Masala
+    const tomorrowEndOfDay = new Date();
+    tomorrowEndOfDay.setDate(tomorrowEndOfDay.getDate() + 5);
+    const offerData = {
+      restaurant_id: restaurantId,
+      menu_item_id: paneerItem.id,
+      discount_pct: 20,
+      floor_price: 250,
+      active: true,
+      expires_at: tomorrowEndOfDay.toISOString()
+    };
+    const { error: offerError } = await supabase.from("offers").insert(offerData);
+    if (offerError) {
+      console.warn("Failed to seed default offer:", offerError.message);
+    }
+
     // 8. Re-trigger calculations of menu item stocks in SQL to synchronize
     // (This is run automatically by database triggers, but we can verify it by fetching menu items)
     const { data: finalItems } = await supabase
