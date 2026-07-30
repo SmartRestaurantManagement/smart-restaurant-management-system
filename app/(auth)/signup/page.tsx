@@ -19,9 +19,14 @@ export default function SignupPage() {
     setLoading(true)
     setError('')
 
+    const redirectTo = `${window.location.origin}/auth/confirm`
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: { shouldCreateUser: true, data: { full_name: name.trim() } },
+      options: { 
+        shouldCreateUser: true,
+        emailRedirectTo: redirectTo,
+      },
     })
 
     setLoading(false)
