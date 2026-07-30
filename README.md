@@ -49,7 +49,7 @@ Use the following credentials to access the system during local testing and vali
 ## 🌟 Unique Features & Layout Refinements
 
 ### 1. 🤖 AI-Powered Interactive Dietary Assistant
-* **Floating Chat Panel**: An elegant sparks-badged chat panel that allows customers to specify dietary criteria in plain language (e.g. *"something high-protein and Jain under ₹300"*).
+* **Floating Chat Panel**: An elegant sparks-badged chat panel that allows customers to specify dietary criteria in plain language (e.g. *"something high-protein and Jain under ₹300"*) and they can also ask what goes with what ( e.g. What should I order with paneer tikka?)
 * **Grounded Recommendations**: Suggestions query the LLM engine grounded on active menu items. Recommends dish items with clear reasoning.
 * **Auto-Scroll & Highlight**: Clicking **"View"** on any recommended item inside the chat logs automatically scrolls the main menu page directly to the target dish card and highlights it.
 
@@ -57,17 +57,18 @@ Use the following credentials to access the system during local testing and vali
 * **Portion-Wise Analytics**: Approximate calories and protein content are computed dynamically from recipe ingredients (e.g., *🔥 688 kcal | 💪 33g protein* for Chilli Paneer) using realistic food coefficient weights.
 * **Default Display**: Nutritional metrics are displayed by default under every single dish name/description unconditionally, removing the need for customers to toggle it manually.
 
-### 3. 🏷️ Premium Flash Smart Offer Banner
-* **Landing & Menu Display**: Prominently features active smart offers at the very top of the customer landing page (`/`) and the menu page (`/menu`).
-* **Sleek Aesthetics**: Renders using a custom dark-red gradient theme (`bg-gradient-to-r from-red-950/80 via-amber-950/40 to-charcoal`) with a subtle glowing aura, a pulsing sparkles badge, and inline single-click Add to Cart triggers.
+### 3. 🏷️ AI Weather-Driven Smart Offers
+- **AI-Powered Demand Forecasting:** Combines historical order patterns with real-time weather data from the **Open-Meteo API** to predict next-day demand and generate actionable AI insights.
+- **Intelligent Discount Recommendations:** Detects overstock risks and suggests margin-safe, limited-time discounts to reduce ingredient waste while maintaining profitability.
+- **Premium Smart Offer Banner:** Displays staff-approved Smart Offers prominently on the landing and menu pages with a premium banner and one-click **Add to Cart** for faster conversions.
 
 ### 4. 🛑 Seated Table Checkout Constraints
 * **Checkout Blocks**: Cart checkouts and orders are blocked unless the customer has selected a table, preventing orphan orders from reaching the kitchen.
 * **Alert Banners**: A prompt warning is displayed at checkout advising the customer to join a table from the menu page first.
 * **Table Service Lock**: The "Call Service" widget is locked and prompts the user to join a table so staff knows exactly where to bring services.
 
-### 5. 💳 Pop-up Bill Splitting Modal
-* **Modal Overlay**: Replaced inline tracking blocks with a dedicated post-checkout pop-up modal displaying the order total and immediate actions to split payment among dining participants.
+### 5. 💳 One-Click Bill Splitting
+- **Seamless Group Payments:** Opens a dedicated post-checkout modal where users can view the total amount and effortlessly split the bill among friends with an intuitive interface.
 
 ### 6. 🚀 Sub-50ms Menu Caching (`unstable_cache`)
 * **Static Database Querying**: Restructured database menu requests to execute through a public anon client that bypasses reading session cookies.
@@ -76,6 +77,13 @@ Use the following credentials to access the system during local testing and vali
 ### 7. 📲 Mobile UI Optimizations
 * **Mobile Scaling**: Removed scrolling tickers and layout strips that caused visual wrapping bugs on mobile screens, aligning layout elements for phone size viewports.
 * **Anti-Infinite Render Fix**: Implemented stable `useMemo` hooks for Supabase clients and `useEffect` lifecycle mounts (active flag hooks) on staff order, catalog, and request pages, preventing infinite react rendering loops and browser hangs.
+  
+### 8. 🔍 Intelligent Menu Explorer
+- **Smart Search & Filtering:** Enables customers to discover dishes effortlessly with live search, price filters, Veg/Non-Veg categories, and dynamic sorting by **Price** or **Popularity (Most Ordered)** for a personalized ordering experience.
+
+### 9. 🔔 Real-Time Table Service Requests
+- **Instant Service Assistance:** Customers can request **Drinking Water**, **Call a Server**, or **Request the Bill** directly from the digital menu through a dedicated service modal.
+- **Live Staff Dashboard Alerts:** Every request appears instantly on the staff dashboard with a real-time response timer. Requests that exceed the acceptable response time are automatically highlighted in **red**, enabling staff to prioritize delayed tables and ensure faster service.
 
 ---
 
