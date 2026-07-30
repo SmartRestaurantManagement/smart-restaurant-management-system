@@ -33,7 +33,6 @@ interface ForecastItem {
 
 interface SystemStatus {
   supabase: { healthy: boolean; message: string }
-  gemini: { healthy: boolean; message: string }
   groq: { healthy: boolean; message: string }
   openMeteo: { healthy: boolean; message: string }
 }
@@ -129,7 +128,6 @@ export default function AnalyticsDashboardPage() {
       console.error("Failed to check system status:", e)
       setSystemStatus({
         supabase: { healthy: false, message: "Unreachable" },
-        gemini: { healthy: false, message: "Unreachable" },
         groq: { healthy: false, message: "Unreachable" },
         openMeteo: { healthy: false, message: "Unreachable" }
       })
@@ -505,17 +503,10 @@ export default function AnalyticsDashboardPage() {
               <span className="text-neutral-500 font-normal">({systemStatus.supabase.message})</span>
             </div>
 
-            {/* Gemini */}
-            <div className="flex items-center gap-1.5 text-xxs font-bold">
-              <span className={`h-2.5 w-2.5 rounded-full ${systemStatus.gemini.healthy ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
-              <span>Gemini LLM</span>
-              <span className="text-neutral-500 font-normal">({systemStatus.gemini.message})</span>
-            </div>
-
-            {/* Groq */}
+            {/* Groq AI */}
             <div className="flex items-center gap-1.5 text-xxs font-bold">
               <span className={`h-2.5 w-2.5 rounded-full ${systemStatus.groq.healthy ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
-              <span>Groq Fallback</span>
+              <span>Groq AI</span>
               <span className="text-neutral-500 font-normal">({systemStatus.groq.message})</span>
             </div>
 

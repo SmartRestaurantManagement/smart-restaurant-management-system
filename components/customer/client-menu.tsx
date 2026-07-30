@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -11,10 +11,147 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { AddToCartButton } from '@/components/customer/add-to-cart-button'
-import { PlatterCraft } from '@/components/customer/platter-craft'
-import { Sparkles, MapPin, AlertCircle, RefreshCw, Compass, Search, Utensils, MessageSquare, Flame, Check } from 'lucide-react'
+import { Sparkles, MapPin, AlertCircle, RefreshCw, Search, Utensils, MessageSquare, Flame, Check, ArrowUpDown, ChevronDown, ChevronUp, Bell, Bot, X, PhoneCall } from 'lucide-react'
 import type { Database } from '@/types/database'
 import type { CategoryWithItems } from '@/lib/menu/get-menu'
+
+const INGREDIENT_NUTRITION: Record<string, { caloriesPerKg: number; proteinPerKg: number }> = {
+  'chicken': { caloriesPerKg: 1650, proteinPerKg: 310 },
+  'mutton': { caloriesPerKg: 2940, proteinPerKg: 250 },
+  'paneer': { caloriesPerKg: 3600, proteinPerKg: 180 },
+  'butter': { caloriesPerKg: 7170, proteinPerKg: 8 },
+  'naan dough': { caloriesPerKg: 2750, proteinPerKg: 80 },
+  'rice': { caloriesPerKg: 3600, proteinPerKg: 70 },
+  'tomato': { caloriesPerKg: 180, proteinPerKg: 9 },
+  'onion': { caloriesPerKg: 400, proteinPerKg: 11 },
+  'ginger-garlic paste': { caloriesPerKg: 800, proteinPerKg: 20 },
+  'yogurt': { caloriesPerKg: 630, proteinPerKg: 35 },
+  'fresh cream': { caloriesPerKg: 3400, proteinPerKg: 20 },
+  'chickpeas': { caloriesPerKg: 3640, proteinPerKg: 190 },
+  'potato': { caloriesPerKg: 770, proteinPerKg: 20 },
+  'cauliflower': { caloriesPerKg: 250, proteinPerKg: 19 },
+  'spinach': { caloriesPerKg: 230, proteinPerKg: 29 },
+  'green peas': { caloriesPerKg: 810, proteinPerKg: 54 },
+  'red lentils': { caloriesPerKg: 3500, proteinPerKg: 240 },
+  'black lentils': { caloriesPerKg: 3400, proteinPerKg: 250 },
+  'ghee': { caloriesPerKg: 9000, proteinPerKg: 0 },
+  'sugar': { caloriesPerKg: 3870, proteinPerKg: 0 },
+  'milk': { caloriesPerKg: 600, proteinPerKg: 32 },
+  'tea leaves': { caloriesPerKg: 0, proteinPerKg: 0 },
+  'coffee powder': { caloriesPerKg: 0, proteinPerKg: 0 },
+  'mint leaves': { caloriesPerKg: 440, proteinPerKg: 30 },
+  'coriander leaves': { caloriesPerKg: 230, proteinPerKg: 21 },
+  'lemon': { caloriesPerKg: 300, proteinPerKg: 11 },
+  'semolina': { caloriesPerKg: 3600, proteinPerKg: 120 },
+  'mango pulp': { caloriesPerKg: 600, proteinPerKg: 5 },
+  'cashew nuts': { caloriesPerKg: 5530, proteinPerKg: 180 },
+  'chocolate sauce': { caloriesPerKg: 3400, proteinPerKg: 30 },
+  'vanilla essence': { caloriesPerKg: 2500, proteinPerKg: 0 },
+  'khoya': { caloriesPerKg: 3800, proteinPerKg: 150 },
+  'ice cream mix': { caloriesPerKg: 2000, proteinPerKg: 40 }
+}
+
+function calculateNutrition(item: any) {
+  let calories = 0
+  let protein = 0
+  if (item.menu_item_ingredients && item.menu_item_ingredients.length > 0) {
+    for (const mii of item.menu_item_ingredients) {
+      const ingName = mii.ingredients?.name?.toLowerCase() || ''
+      const qty = Number(mii.qty_per_portion) || 0
+      const nut = INGREDIENT_NUTRITION[ingName]
+      if (nut) {
+        calories += qty * nut.caloriesPerKg
+        protein += qty * nut.proteinPerKg
+      }
+    }
+  }
+  
+  if (calories === 0) {
+    const name = item.name.toLowerCase()
+    if (name.includes('chicken') || name.includes('mutton')) {
+      calories = 380
+      protein = 28
+    } else if (name.includes('paneer')) {
+      calories = 340
+      protein = 16
+    } else if (name.includes('dal') || name.includes('chana') || name.includes('biryani')) {
+      calories = 290
+      protein = 12
+    } else if (name.includes('naan') || name.includes('roti') || name.includes('kulcha')) {
+      calories = 210
+      protein = 5
+    } else if (name.includes('lassi') || name.includes('coffee') || name.includes('soda')) {
+      calories = 180
+      protein = 3
+    } else {
+      calories = 150
+      protein = 4
+    }
+  }
+  
+  return {
+    calories: Math.round(calories),
+    protein: Math.round(protein)
+  }
+}
+
+function isItemNonVeg(item: any, categoryName?: string) {
+  const name = item.name.toLowerCase()
+  const desc = (item.description || '').toLowerCase()
+  const cat = (categoryName || '').toLowerCase()
+  
+  if (name.includes('chicken') || name.includes('mutton') || name.includes('fish') || name.includes('egg') || name.includes('rogan josh') || name.includes('wings') || name.includes('curry') && !name.includes('veg')) {
+    return true
+  }
+  if (desc.includes('chicken') || desc.includes('mutton') || desc.includes('fish') || desc.includes('egg') || desc.includes('rogan josh')) {
+    return true
+  }
+  if (cat.includes('non-veg') || cat.includes('non veg')) {
+    return true
+  }
+  if (item.menu_item_ingredients) {
+    for (const mii of item.menu_item_ingredients) {
+      const ingName = mii.ingredients?.name?.toLowerCase() || ''
+      if (ingName.includes('chicken') || ingName.includes('mutton') || ingName.includes('fish') || ingName.includes('egg')) {
+        return true
+      }
+    }
+  }
+  return false
+}
+
+const POPULARITY_SCORES: Record<string, number> = {
+  'Butter Chicken': 98,
+  'Dal Makhani': 92,
+  'Paneer Tikka': 88,
+  'Vegetable Biryani': 85,
+  'Garlic Naan': 84,
+  'Palak Paneer': 80,
+  'Mutton Rogan Josh': 78,
+  'Mango Lassi': 75,
+  'Veg Spring Rolls': 72,
+  'Chicken 65': 70,
+  'Hara Bhara Kebab': 68,
+  'Chilli Paneer': 65,
+  'Tandoori Chicken Wings': 62,
+  'Chana Masala': 60,
+  'Chicken Curry': 58,
+  'Butter Naan': 55,
+  'Paneer Butter Masala': 54,
+  'Veg Pulao': 50,
+  'Masala Chai': 48,
+  'Tandoori Roti': 45,
+  'Missi Roti': 42,
+  'Kulcha': 40,
+  'Cold Coffee': 38,
+  'Fresh Lime Soda': 35,
+  'Filter Coffee': 32,
+  'Gulab Jamun': 30,
+  'Rasmalai': 28,
+  'Vanilla Ice Cream': 25,
+  'Kulfi': 22,
+  'Chocolate Brownie': 20
+}
 
 type MenuItem = Database['public']['Tables']['menu_items']['Row']
 type TableRow = Database['public']['Tables']['tables']['Row']
@@ -74,11 +211,36 @@ export function ClientMenu({ initialCategories }: Props) {
   const [user, setUser] = useState<any>(null)
   const [authLoading, setAuthLoading] = useState(true)
 
-  // Custom Tabs State: 'menu' | 'craft' | 'reviews'
-  const [activeTab, setActiveTab] = useState<'menu' | 'craft' | 'reviews'>('menu')
+  // Custom Tabs State: 'menu' | 'reviews'
+  const [activeTab, setActiveTab] = useState<'menu' | 'reviews'>('menu')
   // Search & Category Filters state
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('All')
+  
+  // Sort and Filter States
+  const [sortBy, setSortBy] = useState<'default' | 'price_asc' | 'price_desc' | 'popularity'>('default')
+  const [highProteinOnly, setHighProteinOnly] = useState(false)
+  const [dietaryType, setDietaryType] = useState<'all' | 'veg' | 'non-veg'>('all')
+  const [expandedNutrition, setExpandedNutrition] = useState<Record<string, boolean>>({})
+
+  // Call for service states
+  const [serviceModalOpen, setServiceModalOpen] = useState(false)
+  const [serviceLoading, setServiceLoading] = useState(false)
+  const [serviceMessage, setServiceMessage] = useState('')
+
+  // Smart Dietary Assistant states
+  const [dietaryAssistantOpen, setDietaryAssistantOpen] = useState(false)
+  const [dietaryQuery, setDietaryQuery] = useState('')
+  const [dietaryMessages, setDietaryMessages] = useState<Array<{ sender: 'user' | 'assistant'; text: string; suggestions?: Array<{ name: string; reason: string }> }>>([
+    { sender: 'assistant', text: 'Hello! I am your Smart Dietary Assistant. Ask me anything like "something high-protein and Jain under ₹300" or "vegan and not too spicy" and I will find matching items from our live menu.' }
+  ])
+  const [dietaryLoading, setDietaryLoading] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Scroll to bottom of dietary chat
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [dietaryMessages, dietaryAssistantOpen])
   
   const supabase = useMemo(() => createClient(), [])
   const router = useRouter()
@@ -246,10 +408,43 @@ export function ClientMenu({ initialCategories }: Props) {
   const filteredCategories = useMemo(() => {
     return categories.map((cat) => {
       // Filter items in this category
-      const matchedItems = cat.menu_items.filter((item) => {
+      let matchedItems = cat.menu_items.filter((item) => {
         const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                               (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()))
-        return matchesSearch
+        if (!matchesSearch) return false
+
+        // High protein filter
+        if (highProteinOnly) {
+          const nut = calculateNutrition(item)
+          if (nut.protein < 20) return false
+        }
+
+        // Veg / Non-Veg filter
+        const isNonVeg = isItemNonVeg(item, cat.name)
+        if (dietaryType === 'veg' && isNonVeg) return false
+        if (dietaryType === 'non-veg' && !isNonVeg) return false
+
+        return true
+      })
+
+      // Sort items in this category
+      matchedItems = [...matchedItems].sort((a, b) => {
+        const offerA = getItemOffer(a.id)
+        const priceA = offerA ? Number(a.price) * (1 - Number(offerA.discount_pct) / 100) : Number(a.price)
+
+        const offerB = getItemOffer(b.id)
+        const priceB = offerB ? Number(b.price) * (1 - Number(offerB.discount_pct) / 100) : Number(b.price)
+
+        if (sortBy === 'price_asc') {
+          return priceA - priceB
+        } else if (sortBy === 'price_desc') {
+          return priceB - priceA
+        } else if (sortBy === 'popularity') {
+          const popA = POPULARITY_SCORES[a.name] || 10
+          const popB = POPULARITY_SCORES[b.name] || 10
+          return popB - popA
+        }
+        return 0 // default
       })
 
       return {
@@ -261,7 +456,71 @@ export function ClientMenu({ initialCategories }: Props) {
       const matchesCategoryPill = selectedCategory === 'All' || cat.name === selectedCategory
       return matchesCategoryPill && cat.menu_items.length > 0
     })
-  }, [categories, searchQuery, selectedCategory])
+  }, [categories, searchQuery, selectedCategory, sortBy, highProteinOnly, dietaryType, activeOffers])
+
+  const handleCallService = async (type: 'water' | 'server' | 'bill') => {
+    if (!tableId) return
+    setServiceLoading(true)
+    setServiceMessage('')
+    try {
+      const res = await fetch('/api/service-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table_id: tableId, type }),
+      })
+      const body = await res.json()
+      if (res.ok) {
+        setServiceMessage(`Request for ${type === 'bill' ? 'the bill' : type} sent successfully!`)
+        setTimeout(() => {
+          setServiceModalOpen(false)
+          setServiceMessage('')
+        }, 2000)
+      } else {
+        setServiceMessage(body.error || 'Failed to submit request.')
+      }
+    } catch (err) {
+      setServiceMessage('Network error. Please try again.')
+    } finally {
+      setServiceLoading(false)
+    }
+  }
+
+  const handleSendDietaryMessage = async () => {
+    if (!dietaryQuery.trim()) return
+    const text = dietaryQuery.trim()
+    setDietaryQuery('')
+    
+    setDietaryMessages(prev => [...prev, { sender: 'user', text }])
+    setDietaryLoading(true)
+
+    try {
+      const res = await fetch('/api/ai/dietary-assistant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: text })
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setDietaryMessages(prev => [...prev, {
+          sender: 'assistant',
+          text: data.explanation,
+          suggestions: data.suggestions
+        }])
+      } else {
+        setDietaryMessages(prev => [...prev, {
+          sender: 'assistant',
+          text: data.error || 'I encountered an error trying to search the menu. Please try again.'
+        }])
+      }
+    } catch (e) {
+      setDietaryMessages(prev => [...prev, {
+        sender: 'assistant',
+        text: 'I could not connect to the assistant server. Please check your connection and try again.'
+      }])
+    } finally {
+      setDietaryLoading(false)
+    }
+  }
 
   return (
     <main className="max-w-5xl mx-auto px-4 py-8 space-y-10 text-charcoal-foreground">
@@ -280,20 +539,6 @@ export function ClientMenu({ initialCategories }: Props) {
             <span className="flex items-center gap-2">
               <Utensils className="h-4 w-4" />
               Digital Menu
-            </span>
-          </button>
-          
-          <button
-            onClick={() => setActiveTab('craft')}
-            className={`py-4 px-4 text-sm font-extrabold tracking-widest uppercase transition-all duration-300 relative cursor-pointer ${
-              activeTab === 'craft'
-                ? 'text-moss font-black border-b-2 border-moss'
-                : 'text-neutral-400 hover:text-neutral-200'
-            }`}
-          >
-            <span className="flex items-center gap-2">
-              <Compass className="h-4 w-4 text-moss animate-pulse" />
-              Spice Platter
             </span>
           </button>
 
@@ -384,6 +629,14 @@ export function ClientMenu({ initialCategories }: Props) {
                   </span>
                 )}
                 <button
+                  onClick={() => setServiceModalOpen(true)}
+                  className="text-emerald-500 hover:text-emerald-400 font-bold underline text-xs flex items-center gap-1 cursor-pointer"
+                >
+                  <Bell className="h-3 w-3 animate-bounce" />
+                  Call Service
+                </button>
+                <span className="text-neutral-700 font-bold">|</span>
+                <button
                   onClick={() => setTableModalOpen(true)}
                   className="text-amber-500 hover:text-amber-400 font-bold underline text-xs cursor-pointer"
                 >
@@ -470,6 +723,85 @@ export function ClientMenu({ initialCategories }: Props) {
             </div>
           </div>
 
+          {/* Sorting & Advanced Filter Row */}
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-black/15 px-4 py-3 rounded-xl border border-neutral-900/60 text-xs">
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-neutral-450 font-bold flex items-center gap-1.5">
+                <ArrowUpDown className="h-3.5 w-3.5 text-terracotta" />
+                Sort by:
+              </span>
+              <div className="flex bg-black/40 border border-neutral-800 rounded-lg p-0.5">
+                {(
+                  [
+                    { value: 'default', label: 'Default' },
+                    { value: 'price_asc', label: 'Price: Low-High' },
+                    { value: 'price_desc', label: 'Price: High-Low' },
+                    { value: 'popularity', label: 'Popularity' },
+                  ] as const
+                ).map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setSortBy(opt.value)}
+                    className={`px-2.5 py-1 rounded-md text-[9px] font-bold tracking-wide uppercase transition-all duration-200 cursor-pointer ${
+                      sortBy === opt.value
+                        ? 'bg-neutral-850 text-white font-extrabold shadow-sm'
+                        : 'text-neutral-500 hover:text-neutral-300'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {/* Veg / Non-veg selector toggle */}
+              <div className="flex bg-black/40 border border-neutral-800 rounded-lg p-0.5 mr-2">
+                {(
+                  [
+                    { value: 'all', label: 'All' },
+                    { value: 'veg', label: 'Veg' },
+                    { value: 'non-veg', label: 'Non-Veg' },
+                  ] as const
+                ).map((type) => (
+                  <button
+                    key={type.value}
+                    onClick={() => setDietaryType(type.value)}
+                    className={`px-3 py-1 rounded-md text-[9px] font-extrabold tracking-wide uppercase transition-all duration-200 cursor-pointer flex items-center gap-1 ${
+                      dietaryType === type.value
+                        ? type.value === 'veg'
+                          ? 'bg-emerald-600/90 text-white shadow-sm'
+                          : type.value === 'non-veg'
+                            ? 'bg-red-900/95 text-white shadow-sm'
+                            : 'bg-neutral-800 text-white shadow-sm'
+                        : 'text-neutral-500 hover:text-neutral-300'
+                    }`}
+                  >
+                    {type.value === 'veg' && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 border border-emerald-500 block shrink-0" />
+                    )}
+                    {type.value === 'non-veg' && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 border border-red-650 block shrink-0" />
+                    )}
+                    <span>{type.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setHighProteinOnly(!highProteinOnly)}
+                className={`px-3 py-1.5 rounded-lg text-[9px] font-extrabold tracking-wider uppercase border transition-all duration-200 cursor-pointer flex items-center gap-1.5 ${
+                  highProteinOnly
+                    ? 'bg-amber-600/90 text-white border-amber-500 shadow-lg shadow-amber-900/10'
+                    : 'bg-neutral-950/80 text-neutral-450 hover:bg-neutral-900 border-neutral-800'
+                }`}
+              >
+                <Flame className={`h-3 w-3 ${highProteinOnly ? 'text-amber-300 animate-pulse' : 'text-neutral-500'}`} />
+                <span>High Protein (>= 20g)</span>
+              </button>
+            </div>
+          </div>
+
           {/* Menu Catalog Listing */}
           <div className="space-y-12">
             {filteredCategories.length === 0 ? (
@@ -540,9 +872,22 @@ export function ClientMenu({ initialCategories }: Props) {
 
                           <CardHeader className="p-4 pb-2">
                             <div className="flex justify-between items-start gap-2">
-                              <CardTitle className="text-base font-extrabold text-neutral-100 pr-10 line-clamp-1 group-hover:text-terracotta transition-colors">
+                              <CardTitle className="text-base font-extrabold text-neutral-100 pr-1 line-clamp-1 group-hover:text-terracotta transition-colors">
                                 {item.name}
                               </CardTitle>
+                              
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  setExpandedNutrition(prev => ({ ...prev, [item.id]: !prev[item.id] }))
+                                }}
+                                className="text-[9px] font-bold text-white hover:text-white bg-neutral-900 border border-neutral-850 px-2 py-0.5 rounded flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+                              >
+                                <Flame className="h-2.5 w-2.5 text-amber-500" />
+                                <span>Macros</span>
+                                {expandedNutrition[item.id] ? <ChevronUp className="h-2.5 w-2.5" /> : <ChevronDown className="h-2.5 w-2.5" />}
+                              </button>
                             </div>
                             
                             <div className="flex items-center gap-2 mt-1">
@@ -568,6 +913,28 @@ export function ClientMenu({ initialCategories }: Props) {
                           </CardHeader>
                           
                           <CardContent className="p-4 pt-0 space-y-4 flex-1 flex flex-col justify-between">
+                            {expandedNutrition[item.id] && (() => {
+                              const nut = calculateNutrition(item)
+                              return (
+                                <div className="bg-black/40 border border-neutral-850 p-2.5 rounded-xl space-y-1.5 text-xxs text-neutral-355 animate-in slide-in-from-top-2 duration-200">
+                                  <div className="flex justify-between font-bold text-white border-b border-neutral-900/60 pb-1">
+                                    <span>Portion Est. Nutrition</span>
+                                    <span className="text-amber-500 font-extrabold">Kaizen Lab</span>
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-2 text-center pt-0.5">
+                                    <div className="bg-neutral-950/80 p-1.5 rounded-lg border border-neutral-900">
+                                      <span className="text-neutral-350 block text-[10px] font-semibold">Calories</span>
+                                      <strong className="text-white text-xs font-black">{nut.calories} kcal</strong>
+                                    </div>
+                                    <div className="bg-neutral-950/80 p-1.5 rounded-lg border border-neutral-900">
+                                      <span className="text-neutral-350 block text-[10px] font-semibold">Protein</span>
+                                      <strong className="text-white text-xs font-black">{nut.protein}g</strong>
+                                    </div>
+                                  </div>
+                                </div>
+                              )
+                            })()}
+
                             {item.description && (
                               <p className="text-xs text-neutral-400 line-clamp-2 h-8 leading-relaxed">
                                 {item.description}
@@ -609,22 +976,7 @@ export function ClientMenu({ initialCategories }: Props) {
         </div>
       )}
 
-      {/* RENDER TAB 2: SPICE PLATTER 3D */}
-      {activeTab === 'craft' && (
-        <div className="space-y-6 animate-in fade-in duration-500">
-          <div className="text-center space-y-2 max-w-xl mx-auto pb-4">
-            <Badge className="bg-moss/20 text-moss font-extrabold uppercase tracking-widest text-[9px] border border-moss/30 px-3 py-1">
-              Aroma Lab
-            </Badge>
-            <h1 className="text-3xl font-extrabold text-white tracking-tight">Spice Calibration</h1>
-            <p className="text-xs text-neutral-400 leading-relaxed">
-              Explore the five essential whole spices that form the aromatic signature of Kaizen. Rotate and scatter them to inspect their culinary profiles.
-            </p>
-          </div>
-          
-          <PlatterCraft />
-        </div>
-      )}
+
 
       {/* RENDER TAB 3: TESTIMONIALS (GUEST ACCLAIM) */}
       {activeTab === 'reviews' && (
@@ -877,7 +1229,7 @@ export function ClientMenu({ initialCategories }: Props) {
               className="w-full bg-black/60 border border-neutral-800 rounded-xl px-4 py-2.5 text-xs text-amber-200 focus:outline-none focus:ring-1 focus:ring-amber-500 font-bold"
             >
               <option value="" className="bg-charcoal text-neutral-400">Choose Table...</option>
-              {tables.map((t) => (
+              {tables.filter(t => t.status !== 'reserved').map((t) => (
                 <option key={t.id} value={t.id} className="bg-charcoal text-white font-bold">
                   Table {t.table_number} ({t.status})
                 </option>
@@ -904,6 +1256,169 @@ export function ClientMenu({ initialCategories }: Props) {
           </div>
         </div>
       )}
+
+      {/* Service Call Modal */}
+      {serviceModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 max-w-sm w-full mx-4 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center pb-2 border-b border-neutral-800">
+              <h3 className="text-base font-extrabold text-white flex items-center gap-1.5">
+                <Bell className="h-4 w-4 text-emerald-500 animate-bounce" />
+                Call for Table Service
+              </h3>
+              <button onClick={() => setServiceModalOpen(false)} className="text-neutral-500 hover:text-white transition-colors cursor-pointer">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            
+            <p className="text-xs text-neutral-400 leading-relaxed">
+              Choose the type of service request you would like to send. The staff will be alerted immediately.
+            </p>
+            
+            <div className="grid grid-cols-1 gap-2.5 pt-2">
+              <Button
+                disabled={serviceLoading}
+                onClick={() => handleCallService('water')}
+                className="w-full bg-neutral-950 border border-neutral-800 hover:bg-neutral-850 hover:border-neutral-750 text-neutral-250 font-bold rounded-xl py-5 flex items-center justify-start gap-3 px-4 cursor-pointer"
+              >
+                <span>💧</span>
+                <span className="text-xs">Request Drinking Water</span>
+              </Button>
+              <Button
+                disabled={serviceLoading}
+                onClick={() => handleCallService('server')}
+                className="w-full bg-neutral-950 border border-neutral-800 hover:bg-neutral-850 hover:border-neutral-750 text-neutral-250 font-bold rounded-xl py-5 flex items-center justify-start gap-3 px-4 cursor-pointer"
+              >
+                <span>🔔</span>
+                <span className="text-xs">Call a Server</span>
+              </Button>
+              <Button
+                disabled={serviceLoading}
+                onClick={() => handleCallService('bill')}
+                className="w-full bg-neutral-950 border border-neutral-800 hover:bg-neutral-850 hover:border-neutral-750 text-neutral-250 font-bold rounded-xl py-5 flex items-center justify-start gap-3 px-4 cursor-pointer"
+              >
+                <span>🧾</span>
+                <span className="text-xs">Request the Bill</span>
+              </Button>
+            </div>
+
+            {serviceMessage && (
+              <div className="bg-emerald-950/40 border border-emerald-900 text-emerald-300 text-xxs p-3 rounded-xl text-center font-bold">
+                {serviceMessage}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Floating Smart Dietary Assistant Bot */}
+      <div className="fixed bottom-6 right-6 z-40">
+        {!dietaryAssistantOpen ? (
+          <button
+            onClick={() => setDietaryAssistantOpen(true)}
+            className="bg-terracotta hover:bg-terracotta/90 text-white rounded-full p-4 shadow-2xl flex items-center justify-center border border-terracotta/30 group hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer"
+          >
+            <Bot className="h-6 w-6 text-white group-hover:animate-pulse" />
+            <span className="absolute -top-1 -right-1 flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+            </span>
+          </button>
+        ) : (
+          <div className="bg-neutral-950/95 border border-neutral-800 rounded-3xl w-80 sm:w-96 h-[460px] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-300 backdrop-blur-md">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-neutral-900 via-charcoal to-neutral-950 px-5 py-4 border-b border-neutral-800 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="bg-terracotta/15 p-1.5 rounded-lg border border-terracotta/25">
+                  <Bot className="h-4.5 w-4.5 text-terracotta" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-extrabold text-white uppercase tracking-wider">Dietary Assistant</h4>
+                  <span className="text-[9px] text-emerald-400 font-extrabold flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Kaizen AI Active
+                  </span>
+                </div>
+              </div>
+              <button 
+                onClick={() => setDietaryAssistantOpen(false)}
+                className="text-neutral-500 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="h-4.5 w-4.5" />
+              </button>
+            </div>
+
+            {/* Messages Body */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
+              {dietaryMessages.map((msg, idx) => (
+                <div key={idx} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 leading-relaxed ${
+                    msg.sender === 'user'
+                      ? 'bg-terracotta text-white rounded-tr-none'
+                      : 'bg-neutral-900 border border-neutral-800 text-neutral-200 rounded-tl-none space-y-2'
+                  }`}>
+                    <p className="whitespace-pre-wrap text-[11px]">{msg.text}</p>
+                    
+                    {/* Render recommendations suggestions if any */}
+                    {msg.suggestions && msg.suggestions.length > 0 && (
+                      <div className="border-t border-neutral-850 pt-2 mt-2 space-y-2">
+                        <span className="text-[9px] text-neutral-500 font-extrabold block uppercase tracking-wider">Suggested Dishes:</span>
+                        {msg.suggestions.map((sug, sIdx) => (
+                          <div 
+                            key={sIdx}
+                            className="bg-black/40 border border-neutral-850 p-2 rounded-xl flex items-center justify-between gap-2 hover:border-amber-900/30 transition-all cursor-pointer"
+                            onClick={() => {
+                              // Highlight item by putting name in search query
+                              setSearchQuery(sug.name);
+                              setDietaryAssistantOpen(false);
+                            }}
+                          >
+                            <div className="text-left">
+                              <strong className="text-amber-405 block text-xxs font-bold">{sug.name}</strong>
+                              <span className="text-[10px] text-neutral-200 block mt-0.5 line-clamp-2">{sug.reason}</span>
+                            </div>
+                            <span className="text-[9px] bg-amber-600/10 text-amber-500 border border-amber-500/20 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider shrink-0">View</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {dietaryLoading && (
+                <div className="flex justify-start">
+                  <div className="bg-neutral-900 border border-neutral-800 text-neutral-400 rounded-2xl rounded-tl-none px-4 py-2.5 flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 bg-neutral-500 rounded-full animate-bounce" />
+                    <span className="h-1.5 w-1.5 bg-neutral-500 rounded-full animate-bounce [animation-delay:0.2s]" />
+                    <span className="h-1.5 w-1.5 bg-neutral-500 rounded-full animate-bounce [animation-delay:0.4s]" />
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Input Bar */}
+            <div className="p-3 border-t border-neutral-800 bg-neutral-950 flex gap-2">
+              <input
+                type="text"
+                placeholder="Ask me: 'Jain under ₹300'..."
+                value={dietaryQuery}
+                onChange={(e) => setDietaryQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSendDietaryMessage()}
+                className="flex-1 bg-black/40 border border-neutral-800 rounded-xl px-3 py-2 text-xxs text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-terracotta"
+              />
+              <Button
+                size="sm"
+                onClick={handleSendDietaryMessage}
+                disabled={dietaryLoading || !dietaryQuery.trim()}
+                className="bg-terracotta hover:bg-terracotta/90 text-white font-bold rounded-xl px-3 text-xxs cursor-pointer"
+              >
+                Send
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
     </main>
   )
 }

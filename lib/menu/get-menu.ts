@@ -3,9 +3,17 @@ import type { Database } from '@/types/database'
 
 type MenuItem = Database['public']['Tables']['menu_items']['Row']
 type MenuCategory = Database['public']['Tables']['menu_categories']['Row']
+type MenuItemIngredient = Database['public']['Tables']['menu_item_ingredients']['Row']
+type Ingredient = Database['public']['Tables']['ingredients']['Row']
+
+export type MenuItemWithIngredients = MenuItem & {
+  menu_item_ingredients: (MenuItemIngredient & {
+    ingredients: Ingredient | null
+  })[]
+}
 
 export type CategoryWithItems = MenuCategory & {
-  menu_items: MenuItem[]
+  menu_items: MenuItemWithIngredients[]
 }
 
 export async function getMenu(): Promise<CategoryWithItems[]> {
@@ -15,7 +23,15 @@ export async function getMenu(): Promise<CategoryWithItems[]> {
     .from('menu_categories')
     .select(`
       *,
-      menu_items (*)
+      menu_items (
+        *,
+        menu_item_ingredients (
+          *,
+          ingredients (
+            *
+          )
+        )
+      )
     `)
     .order('sort_order', { ascending: true })
 
@@ -24,5 +40,5 @@ export async function getMenu(): Promise<CategoryWithItems[]> {
     return []
   }
 
-  return data as CategoryWithItems[]
+  return data as any as CategoryWithItems[]
 }

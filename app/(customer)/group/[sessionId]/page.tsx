@@ -44,6 +44,11 @@ export default function GroupSessionPage({
   const [payerAmount, setPayerAmount] = useState<number>(0)
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('')
 
+  // Simulated payment states
+  const [paying, setPaying] = useState(false)
+  const [paymentSeconds, setPaymentSeconds] = useState(5)
+  const [paymentDone, setPaymentDone] = useState(false)
+
   // Load the order and items for the session
   const loadSessionData = useCallback(async () => {
     // 1. Fetch order
@@ -186,6 +191,55 @@ export default function GroupSessionPage({
   const handleShare = () => {
     navigator.clipboard.writeText(window.location.href)
     alert('Session URL copied! Send it to your friends to join table.')
+  }
+
+  const handleSimulatePayment = async () => {
+    if (!order) return
+    setPaying(true)
+    setPaymentSeconds(5)
+    
+    // Start countdown
+    const interval = setInterval(() => {
+      setPaymentSeconds(prev => {
+        if (prev <= 1) {
+          clearInterval(interval)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    // Wait 5 seconds
+    setTimeout(async () => {
+      try {
+        // 1. Submit billing transaction
+        await fetch('/api/billing', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            order_id: order.id,
+            split_method: splitMethod === 'even' ? 'equal' : 'by_item',
+            payment_reference: `UPI-TXN-${Math.floor(100000 + Math.random() * 900000)}`
+          })
+        })
+
+        // 2. Complete order & free table
+        await fetch('/api/billing/complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ order_id: order.id })
+        })
+
+        setPaymentDone(true)
+        setTimeout(() => {
+          router.push('/menu')
+          router.refresh()
+        }, 2000)
+      } catch (err) {
+        console.error('Failed to complete simulated payment:', err)
+        setPaying(false)
+      }
+    }, 5000)
   }
 
   if (loading) {
@@ -486,11 +540,60 @@ export default function GroupSessionPage({
                   <Sparkles className="h-3 w-3 text-amber-600 animate-pulse" />
                   <span>Kaizen OS - No Gateway Fee</span>
                 </Badge>
+                <Button
+                  onClick={handleSimulatePayment}
+                  disabled={paying}
+                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl py-3 text-xs shadow-md mt-2 flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Check className="h-4 w-4" />
+                  <span>Simulate Payment via UPI</span>
+                </Button>
               </CardContent>
             </Card>
           ) : null}
         </div>
       </div>
+
+      {/* Simulated Payment Overlay Modal */}
+      {paying && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md">
+          <div className="bg-neutral-905 border border-neutral-800 rounded-3xl p-8 max-w-sm w-full mx-4 text-center shadow-2xl space-y-6 animate-in zoom-in-95 duration-200">
+            {!paymentDone ? (
+              <>
+                <div className="relative w-24 h-24 mx-auto flex items-center justify-center">
+                  <div className="absolute inset-0 border-4 border-neutral-800 rounded-full" />
+                  <div className="absolute inset-0 border-4 border-amber-500 rounded-full border-t-transparent animate-spin" />
+                  <span className="text-2xl font-black text-white">{paymentSeconds}s</span>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-lg font-extrabold text-white">Verifying UPI Payment</h3>
+                  <p className="text-xs text-neutral-405 leading-relaxed">
+                    Kaizen payment terminal is checking for confirmation of <strong className="text-amber-400">₹{payerAmount}</strong>.
+                  </p>
+                </div>
+                <Badge variant="secondary" className="bg-neutral-950 border border-neutral-800 text-neutral-405 text-[10px] py-1 rounded px-3 mx-auto">
+                  Scan received. Waiting 5s confirmation...
+                </Badge>
+              </>
+            ) : (
+              <>
+                <div className="w-20 h-20 bg-emerald-600/10 border border-emerald-500/20 text-emerald-400 rounded-full mx-auto flex items-center justify-center text-3xl animate-bounce">
+                  <Check className="h-10 w-10 text-emerald-500" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-extrabold text-emerald-400">Payment Confirmed!</h3>
+                  <p className="text-xs text-neutral-300 leading-relaxed font-semibold">
+                    Kaizen Billing engine cleared the table and completed the order.
+                  </p>
+                  <p className="text-[10px] text-neutral-500 italic pt-1 font-bold">
+                    Redirecting back to menu...
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

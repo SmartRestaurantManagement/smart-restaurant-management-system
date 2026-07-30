@@ -56,6 +56,7 @@ export function ClientOrderTracking({
   const [serviceModalOpen, setServiceModalOpen] = useState(false)
   const [serviceLoading, setServiceLoading] = useState(false)
   const [serviceMessage, setServiceMessage] = useState('')
+  const [showSplitPrompt, setShowSplitPrompt] = useState(true)
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
 
@@ -171,6 +172,38 @@ export function ClientOrderTracking({
         </Badge>
       </div>
 
+      {/* Split Bill Prompt Banner */}
+      {showSplitPrompt && sessionId && (
+        <Card className="border border-amber-200 bg-amber-50/40 shadow-sm rounded-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
+          <CardContent className="p-4 flex items-center justify-between gap-4">
+            <div className="flex gap-3">
+              <Receipt className="h-5 w-5 text-amber-600 shrink-0 mt-0.5 animate-pulse" />
+              <div className="text-xs text-neutral-700">
+                <span className="font-bold block text-neutral-850">Split the Bill Now?</span>
+                <p className="mt-0.5 text-neutral-500">Would you like to split the bill with your dining group immediately?</p>
+              </div>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setShowSplitPrompt(false)}
+                className="text-neutral-450 hover:text-neutral-700 font-semibold text-xxs px-2 py-1"
+              >
+                Dismiss
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => router.push(`/group/${sessionId}`)}
+                className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xxs px-3 py-1.5 rounded-xl shadow-md cursor-pointer"
+              >
+                Split Now
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Dynamic Wait Time & Stepper */}
       <Card className="border border-neutral-200 shadow-sm rounded-2xl overflow-hidden bg-white">
         <CardHeader className="bg-neutral-50/50 p-5 border-b border-neutral-100 flex flex-row items-center justify-between">
@@ -278,8 +311,8 @@ export function ClientOrderTracking({
             
             <Button
               onClick={() => router.push(`/group/${sessionId}`)}
-              disabled={currentStepIndex < 3} // split bill enabled once order is ready, served, or completed
-              className="flex-1 bg-terracotta text-terracotta-foreground hover:bg-terracotta/90 font-bold rounded-xl py-5"
+              disabled={!sessionId}
+              className="flex-1 bg-terracotta text-terracotta-foreground hover:bg-terracotta/90 font-bold rounded-xl py-5 cursor-pointer"
             >
               <Receipt className="mr-2 h-4 w-4" />
               Split Bill

@@ -39,45 +39,6 @@ async function callGroq(prompt: string): Promise<{ text: string; error?: string 
   }
 }
 
-async function callGemini(prompt: string): Promise<{ text: string; error?: string }> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return { text: "", error: "GEMINI_API_KEY not found in environment variables" };
-  }
-
-  try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 500,
-          },
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const errText = await response.text().catch(() => "");
-      const msg = `Gemini API returned status ${response.status}: ${errText.slice(0, 100)}`;
-      console.warn(msg);
-      return { text: "", error: msg };
-    }
-
-    const data = await response.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    return { text };
-  } catch (error: any) {
-    const msg = error?.message || "Gemini network request failed";
-    console.error("Gemini API request failed:", error);
-    return { text: "", error: msg };
-  }
-}
-
 /**
  * Generates operational recommendations for the staff dashboard based on tomorrow's demand forecast and weather.
  * Uses Groq as the primary LLM engine.
@@ -86,7 +47,7 @@ export async function generateAnalyticsInsights(
   forecasts: Array<{ name: string; remainingStock: number | null; predictedDemand: number; overstockRisk: boolean; suggestedDiscountPct: number }>,
   weatherCondition: string,
   tempMaxC: number
-): Promise<{ insights: string; provider: "groq" | "gemini" | "fallback"; error?: string }> {
+): Promise<{ insights: string; provider: "groq" | "fallback"; error?: string }> {
   const overstockedItems = forecasts.filter((f) => f.overstockRisk);
   
   let prompt = `You are Kaizen, an expert AI restaurant consultant. Analyze the following data and generate 3 clear, actionable, short operational insights (1 sentence each) for the restaurant manager for tomorrow.\n\n`;
@@ -104,14 +65,6 @@ export async function generateAnalyticsInsights(
   if (groqRes.text && groqRes.text.trim()) {
     console.log("[AI Insights] Groq call succeeded.");
     return { insights: groqRes.text.trim(), provider: "groq" };
-  }
-
-  // 2. Secondary LLM: Gemini (optional fallback)
-  console.log("[AI Insights] Groq failed/unconfigured. Attempting Gemini API call...");
-  const geminiRes = await callGemini(prompt);
-  if (geminiRes.text && geminiRes.text.trim()) {
-    console.log("[AI Insights] Gemini call succeeded.");
-    return { insights: geminiRes.text.trim(), provider: "gemini" };
   }
 
   const primaryError = groqRes.error || "GROQ_API_KEY not configured";
@@ -151,11 +104,6 @@ export async function explainAllergenConflict(
 
   let groqRes = await callGroq(prompt);
   let responseText = groqRes.text;
-  if (!responseText) {
-    console.warn("Groq allergen call failed, trying Gemini fallback...");
-    let geminiRes = await callGemini(prompt);
-    responseText = geminiRes.text;
-  }
 
   if (responseText) {
     try {
@@ -193,4 +141,51 @@ export async function explainAllergenConflict(
   }
 
   return { explanation, substitute };
+}
+
+/**
+ * Smart Dietary Assistant: Grounded menu recommendation using Groq
+ */
+export async function recommendDietaryDishes(
+  query: string,
+  menuItems: Array<{ name: string; price: number; description: string | null; category: string; protein: number; calories: number; ingredients: string[] }>
+): Promise<{ suggestions: Array<{ name: string; reason: string }>; explanation: string }> {
+  let prompt = `You are a Smart Dietary Assistant for Kaizen Restaurant.\n`;
+  prompt += `The customer has specified this preference: "${query}"\n\n`;
+  prompt += `Here is the current menu (items are already tagged with calories, protein, and ingredients):\n`;
+  for (const item of menuItems) {
+    prompt += `- ${item.name} (${item.category}): Price: ₹${item.price}, Protein: ${item.protein}g, Calories: ${item.calories} kcal. Ingredients: ${item.ingredients.join(", ")}. Description: ${item.description || "none"}\n`;
+  }
+  
+  prompt += `\nFind matching dishes from the menu above. Suggest 1 to 3 dishes that actually match the customer's request. Do not suggest or invent dishes that are not on the menu. Every suggested dish must match the ingredients constraints (e.g. Jain option means no root vegetables like onion, garlic, potato; vegan option means no animal products like meat, paneer, dairy, yogurt, butter, milk, khoya, ghee).\n\n`;
+  prompt += `Provide the response in JSON format with two keys (ensure valid JSON keys "suggestions" and "explanation"):
+  1. "suggestions": An array of objects, each representing a suggestion:
+     - "name": Exact name of the suggested menu item.
+     - "reason": A brief reason why it fits their dietary constraint.
+  2. "explanation": A friendly, natural language summary (max 40 words) explaining why these dishes fit or why certain requested criteria could/could not be met.`;
+
+  let responseText = "";
+  // 1. Groq
+  const groqRes = await callGroq(prompt);
+  if (groqRes.text && groqRes.text.trim()) {
+    responseText = groqRes.text;
+  }
+
+  if (responseText) {
+    try {
+      const jsonStart = responseText.indexOf("{");
+      const jsonEnd = responseText.lastIndexOf("}") + 1;
+      if (jsonStart !== -1 && jsonEnd !== -1) {
+        const parsed = JSON.parse(responseText.slice(jsonStart, jsonEnd));
+        return {
+          suggestions: parsed.suggestions || [],
+          explanation: parsed.explanation || "I found some options that match your preference.",
+        };
+      }
+    } catch (e) {
+      console.warn("Failed to parse LLM dietary response, using local fallback:", e);
+    }
+  }
+
+  throw new Error("Groq LLM call failed or returned empty response");
 }
