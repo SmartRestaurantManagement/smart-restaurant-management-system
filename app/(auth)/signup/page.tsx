@@ -19,9 +19,13 @@ export default function SignupPage() {
     setLoading(true)
     setError('')
 
+    const redirectTo = `${window.location.origin}/auth/confirm`
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { shouldCreateUser: true },
+      options: { 
+        shouldCreateUser: true,
+        emailRedirectTo: redirectTo,
+      },
     })
 
     setLoading(false)
@@ -41,9 +45,9 @@ export default function SignupPage() {
           <div className="mx-auto w-12 h-12 rounded-full bg-terracotta/10 flex items-center justify-center">
             <Coffee className="h-6 w-6 text-terracotta" />
           </div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-neutral-800">Sign up for Kaizen</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight text-neutral-800">Log in or Sign up</h1>
           <p className="text-sm text-neutral-500">
-            Enter your email and we&apos;ll send you a one-time code - no password needed.
+            Enter your email and we&apos;ll send you a one-time code to access your account.
           </p>
         </div>
 

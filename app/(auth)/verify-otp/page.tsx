@@ -20,11 +20,39 @@ function VerifyOtpForm() {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const { error } = await supabase.auth.verifyOtp({
+
+    // 1. Try verification with type: 'email' (standard for numeric OTPs)
+    let { error } = await supabase.auth.verifyOtp({
       email,
       token: otp,
       type: 'email',
     })
+
+    // 2. If it fails, fallback to type: 'signup' (in case the GoTrue backend requires 'signup' type for registrations)
+    if (error) {
+      const signupRes = await supabase.auth.verifyOtp({
+        email,
+        token: otp,
+        type: 'signup',
+      })
+      if (!signupRes.error) {
+        error = null
+      } else {
+        // 3. If that also fails, fallback to type: 'magiclink' (in case GoTrue requires 'magiclink' type for existing logins)
+        const magicRes = await supabase.auth.verifyOtp({
+          email,
+          token: otp,
+          type: 'magiclink',
+        })
+        if (!magicRes.error) {
+          error = null
+        } else {
+          // Keep the original error or the last error
+          error = error || magicRes.error
+        }
+      }
+    }
+
     setLoading(false)
     if (error) {
       setError(getAuthErrorMessage(error))

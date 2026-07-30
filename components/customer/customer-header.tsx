@@ -280,7 +280,7 @@ export function CustomerHeader() {
                 className="text-xs font-bold text-amber-400 hover:text-black bg-amber-500/10 hover:bg-amber-500 px-3.5 py-2 rounded-xl transition-all flex items-center gap-1 cursor-pointer border border-amber-500/20"
               >
                 <User className="h-3.5 w-3.5" />
-                <span>Sign Up</span>
+                <span>Log In / Sign Up</span>
               </Link>
             </div>
           )}
